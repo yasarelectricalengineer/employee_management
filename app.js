@@ -11,6 +11,31 @@
   var OT_TYPES = { normal: 'Normal Hour OT', sunday: 'Sunday / Special OT', night: 'Night OT' };
   var DEFAULT_SETTINGS = { currency: 'AED', lastBackup: null };
   var MAX_HOURS = 24;
+  var LEAVE_BUILTIN = [['Full Day', 'Full Day (1 day)'], ['Half Day', 'Half Day (0.5 day)']];
+  var EMP_OT_BUILTIN = [['normal', 'Normal Hour OT'], ['sunday', 'Sunday / Special OT'], ['night', 'Night OT']];
+  var WORKER_OT_BUILTIN = [['normal', 'Normal OT'], ['sunday', 'Sunday / Special OT'], ['night', 'Night OT']];
+  var SOURCE_BUILTIN = [['From Company', 'From Company'], ['Others', 'Others']];
+  function emptyOptions() { return { leaveTypes: [], otTypes: [], workerOtTypes: [], sources: [] }; }
+  function defaultSettings() { var s = Object.assign({}, DEFAULT_SETTINGS); s.options = emptyOptions(); return s; }
+  function normOptions(o) {
+    var r = emptyOptions();
+    if (!o || typeof o !== 'object') return r;
+    function nm(x) { return String(x == null ? '' : x).trim().replace(/\s+/g, ' ').slice(0, 40); }
+    (Array.isArray(o.leaveTypes) ? o.leaveTypes : []).forEach(function (x) {
+      if (!x || typeof x !== 'object') return;
+      var n = nm(x.name), d = Number(x.days);
+      if (n && isFinite(d) && d > 0 && d <= 1) r.leaveTypes.push({ name: n, days: d });
+    });
+    ['otTypes', 'workerOtTypes'].forEach(function (k) {
+      (Array.isArray(o[k]) ? o[k] : []).forEach(function (x) {
+        if (!x || typeof x !== 'object') return;
+        var n = nm(x.name), id = String(x.id || '');
+        if (n && id) r[k].push({ id: id, name: n });
+      });
+    });
+    (Array.isArray(o.sources) ? o.sources : []).forEach(function (x) { var n = nm(x); if (n) r.sources.push(n); });
+    return r;
+  }
   var VIEWS = ['dashboard', 'employees', 'leaves', 'ot', 'advances', 'outsiders', 'outsiderOT', 'reports', 'backup'];
   var TITLES = {
     dashboard: 'Dashboard', employees: 'Employees', leaves: 'Leave Management', ot: 'Employee OT',
@@ -82,12 +107,17 @@
     list.forEach(function (x) { var k = keyFn(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); });
     return m;
   }
-  function leaveDays(l) { return l.type === 'Half Day' ? 0.5 : 1; }
+  function leaveDays(l) {
+    if (l.type === 'Half Day') return 0.5;
+    if (l.type === 'Full Day') return 1;
+    var c = ((db.appSettings && db.appSettings.options && db.appSettings.options.leaveTypes) || []).find(function (x) { return x.name === l.type; });
+    return c ? (Number(c.days) || 1) : 1;
+  }
   function sumOT(list) {
-    var r = { normal: 0, sunday: 0, night: 0, total: 0 };
-    list.forEach(function (o) { if (OT_TYPES[o.type]) r[o.type] += Number(o.hours) || 0; });
-    r.normal = r2(r.normal); r.sunday = r2(r.sunday); r.night = r2(r.night);
-    r.total = r2(r.normal + r.sunday + r.night);
+    var r = { normal: 0, sunday: 0, night: 0, other: 0, total: 0 };
+    list.forEach(function (o) { r[OT_TYPES[o.type] ? o.type : 'other'] += Number(o.hours) || 0; });
+    r.normal = r2(r.normal); r.sunday = r2(r.sunday); r.night = r2(r.night); r.other = r2(r.other);
+    r.total = r2(r.normal + r.sunday + r.night + r.other);
     return r;
   }
   function sumAdv(list) { return r2(list.reduce(function (s, a) { return s + (Number(a.amount) || 0); }, 0)); }
@@ -95,14 +125,16 @@
 
   /* ================= Storage ================= */
   var db = {};
-  function defaultFor(k) { return k === 'appSettings' ? Object.assign({}, DEFAULT_SETTINGS) : []; }
+  function defaultFor(k) { return k === 'appSettings' ? defaultSettings() : []; }
   function loadKey(k) {
     try {
       var raw = localStorage.getItem(k);
       if (raw == null) return defaultFor(k);
       var v = JSON.parse(raw);
       if (k === 'appSettings') {
-        return Object.assign({}, DEFAULT_SETTINGS, (v && typeof v === 'object' && !Array.isArray(v)) ? v : {});
+        var st = Object.assign({}, DEFAULT_SETTINGS, (v && typeof v === 'object' && !Array.isArray(v)) ? v : {});
+        st.options = normOptions(st.options);
+        return st;
       }
       return Array.isArray(v) ? v.filter(function (x) { return x && typeof x === 'object'; }) : [];
     } catch (e) { return defaultFor(k); }
@@ -225,8 +257,22 @@
       '<button class="btn btn-sm btn-danger-o" data-action="delete" data-kind="' + kind + '" data-id="' + esc(id) + '">Delete</button></div>';
   }
   function statusBadge(s) { return '<span class="badge ' + (s === 'Active' ? 'b-active' : 'b-inactive') + '">' + esc(s || '—') + '</span>'; }
-  function otBadge(t) { return '<span class="badge b-' + esc(t) + '">' + esc(OT_TYPES[t] || t) + '</span>'; }
-  function leaveBadge(t) { return '<span class="badge ' + (t === 'Half Day' ? 'b-half' : 'b-full') + '">' + esc(t) + '</span>'; }
+  function otLabel(t) {
+    if (OT_TYPES[t]) return OT_TYPES[t];
+    var o = db.appSettings.options, hit = o.otTypes.concat(o.workerOtTypes).find(function (x) { return x.id === t; });
+    return hit ? hit.name : 'Other';
+  }
+  function otBadge(t) { return '<span class="badge b-' + (OT_TYPES[t] ? esc(t) : 'other') + '">' + esc(otLabel(t)) + '</span>'; }
+  function leaveBadge(t) { return '<span class="badge ' + (leaveDays({ type: t }) < 1 ? 'b-half' : 'b-full') + '">' + esc(t) + '</span>'; }
+  function otherOn(list, t) { return ((db.appSettings.options[list] || []).length > 0) || !!(t && t.other > 0); }
+  function getOpts(list) {
+    var o = (db.appSettings && db.appSettings.options) || emptyOptions();
+    if (list === 'leaveTypes') return LEAVE_BUILTIN.concat((o.leaveTypes || []).map(function (x) { return [x.name, x.name + ' (' + fmtNum(x.days) + ' day)']; }));
+    if (list === 'otTypes') return EMP_OT_BUILTIN.concat((o.otTypes || []).map(function (x) { return [x.id, x.name]; }));
+    if (list === 'workerOtTypes') return WORKER_OT_BUILTIN.concat((o.workerOtTypes || []).map(function (x) { return [x.id, x.name]; }));
+    if (list === 'sources') return SOURCE_BUILTIN.concat((o.sources || []).map(function (n) { return [n, n]; }));
+    return [];
+  }
   function stat(label, value, sub, cls) {
     return '<div class="stat ' + (cls || '') + '"><div class="label">' + esc(label) + '</div><div class="value">' + value + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>';
   }
@@ -257,13 +303,15 @@
       stat('Normal OT Hours', fmtNum(ot.normal), 'Employees', 'y') +
       stat('Sunday / Special OT Hours', fmtNum(ot.sunday), 'Employees', 'y') +
       stat('Night OT Hours', fmtNum(ot.night), 'Employees', 'y') +
-      stat('Total OT Hours', fmtNum(ot.total), 'Normal + Sunday/Special + Night') +
+      (otherOn('otTypes', ot) ? stat('Other OT Hours', fmtNum(ot.other), 'Custom OT types', 'y') : '') +
+      stat('Total OT Hours', fmtNum(ot.total), otherOn('otTypes', ot) ? 'Normal + Sunday/Special + Night + Other' : 'Normal + Sunday/Special + Night') +
       stat('Total Advance', money(adv), m ? 'Given in ' + esc(monthLabel(m)) : 'All time', 'd') +
       '</div>';
     html += cardOf('Outside Worker OT', periodLabel(m),
       '<div class="card-body"><div class="stats small" style="margin:0">' +
       stat('Normal OT', fmtNum(oot.normal), '', 'y') + stat('Sunday / Special OT', fmtNum(oot.sunday), '', 'y') +
-      stat('Night OT', fmtNum(oot.night), '', 'y') + stat('Total', fmtNum(oot.total), 'hours') + '</div></div>');
+      stat('Night OT', fmtNum(oot.night), '', 'y') + (otherOn('workerOtTypes', oot) ? stat('Other OT', fmtNum(oot.other), '', 'y') : '') +
+      stat('Total', fmtNum(oot.total), 'hours') + '</div></div>');
     $('#dashboard-body').innerHTML = html;
   }
 
@@ -297,12 +345,15 @@
     if (!rows.length) { sum.innerHTML = ''; box.innerHTML = noMatch('leaves'); return; }
     var g = group(rows, function (l) { return l.employeeId; });
     var srows = Array.from(g.entries()).map(function (en) {
-      return { id: en[0], full: en[1].filter(function (l) { return l.type !== 'Half Day'; }).length, half: en[1].filter(function (l) { return l.type === 'Half Day'; }).length, days: sumLeave(en[1]) };
+      var full = en[1].filter(function (l) { return l.type === 'Full Day'; }).length, half = en[1].filter(function (l) { return l.type === 'Half Day'; }).length;
+      return { id: en[0], full: full, half: half, other: en[1].length - full - half, days: sumLeave(en[1]) };
     }).sort(function (a, b) { return empName(a.id).localeCompare(empName(b.id)); });
+    var lo = db.appSettings.options.leaveTypes.length > 0 || srows.some(function (s) { return s.other > 0; });
+    function sumBy(k) { return srows.reduce(function (a, s) { return a + s[k]; }, 0); }
     sum.innerHTML = cardOf('Employee-wise Leave Summary', periodLabel(m), tbl(
-      ['Employee', 'Full Days', 'Half Days', 'Total Leave Days'],
-      srows.map(function (s) { return [empCell(s.id), fmtNum(s.full), fmtNum(s.half), '<strong>' + fmtNum(s.days) + '</strong>']; }),
-      ['Total', fmtNum(srows.reduce(function (a, s) { return a + s.full; }, 0)), fmtNum(srows.reduce(function (a, s) { return a + s.half; }, 0)), fmtNum(sumLeave(rows))]));
+      ['Employee', 'Full Days', 'Half Days'].concat(lo ? ['Other Leaves'] : [], ['Total Leave Days']),
+      srows.map(function (s) { return [empCell(s.id), fmtNum(s.full), fmtNum(s.half)].concat(lo ? [fmtNum(s.other)] : [], ['<strong>' + fmtNum(s.days) + '</strong>']); }),
+      ['Total', fmtNum(sumBy('full')), fmtNum(sumBy('half'))].concat(lo ? [fmtNum(sumBy('other'))] : [], [fmtNum(sumLeave(rows))])));
     box.innerHTML = cardOf('Leave Records', rows.length + ' record(s)', tbl(
       ['Date', 'Employee', 'Leave Type', 'Days', 'Reason', 'Notes', 'Actions'],
       rows.map(function (l) {
@@ -323,11 +374,11 @@
     var g = group(rows, function (o) { return o.employeeId; });
     var srows = Array.from(g.entries()).map(function (en) { return { id: en[0], s: sumOT(en[1]) }; })
       .sort(function (a, b) { return empName(a.id).localeCompare(empName(b.id)); });
-    var t = sumOT(rows);
+    var t = sumOT(rows), oc = otherOn('otTypes', t);
     sum.innerHTML = cardOf('Employee-wise OT Summary', periodLabel(m), tbl(
-      ['Employee', 'Normal OT', 'Sunday/Special OT', 'Night OT', 'Total OT'],
-      srows.map(function (x) { return [empCell(x.id), fmtNum(x.s.normal), fmtNum(x.s.sunday), fmtNum(x.s.night), '<strong>' + fmtNum(x.s.total) + '</strong>']; }),
-      ['Total', fmtNum(t.normal), fmtNum(t.sunday), fmtNum(t.night), fmtNum(t.total)]));
+      ['Employee', 'Normal OT', 'Sunday/Special OT', 'Night OT'].concat(oc ? ['Other OT'] : [], ['Total OT']),
+      srows.map(function (x) { return [empCell(x.id), fmtNum(x.s.normal), fmtNum(x.s.sunday), fmtNum(x.s.night)].concat(oc ? [fmtNum(x.s.other)] : [], ['<strong>' + fmtNum(x.s.total) + '</strong>']); }),
+      ['Total', fmtNum(t.normal), fmtNum(t.sunday), fmtNum(t.night)].concat(oc ? [fmtNum(t.other)] : [], [fmtNum(t.total)])));
     box.innerHTML = cardOf('OT Records', rows.length + ' record(s)', tbl(
       ['Date', 'Employee', 'OT Type', 'Hours', 'Notes', 'Actions'],
       rows.map(function (o) {
@@ -388,11 +439,11 @@
     var g = group(rows, function (o) { return o.workerId; });
     var srows = Array.from(g.entries()).map(function (en) { return { id: en[0], s: sumOT(en[1]) }; })
       .sort(function (a, b) { return workerName(a.id).localeCompare(workerName(b.id)); });
-    var t = sumOT(rows);
+    var t = sumOT(rows), oc = otherOn('workerOtTypes', t);
     sum.innerHTML = cardOf('Worker-wise OT Summary', periodLabel(m), tbl(
-      ['Worker', 'Normal OT', 'Sunday/Special OT', 'Night OT', 'Total OT'],
-      srows.map(function (x) { return [workerCell(x.id), fmtNum(x.s.normal), fmtNum(x.s.sunday), fmtNum(x.s.night), '<strong>' + fmtNum(x.s.total) + '</strong>']; }),
-      ['Total', fmtNum(t.normal), fmtNum(t.sunday), fmtNum(t.night), fmtNum(t.total)]));
+      ['Worker', 'Normal OT', 'Sunday/Special OT', 'Night OT'].concat(oc ? ['Other OT'] : [], ['Total OT']),
+      srows.map(function (x) { return [workerCell(x.id), fmtNum(x.s.normal), fmtNum(x.s.sunday), fmtNum(x.s.night)].concat(oc ? [fmtNum(x.s.other)] : [], ['<strong>' + fmtNum(x.s.total) + '</strong>']); }),
+      ['Total', fmtNum(t.normal), fmtNum(t.sunday), fmtNum(t.night)].concat(oc ? [fmtNum(t.other)] : [], [fmtNum(t.total)])));
     box.innerHTML = cardOf('Outside Worker OT Records', rows.length + ' record(s)', tbl(
       ['Date', 'Worker', 'Source', 'OT Type', 'Hours', 'Notes', 'Actions'],
       rows.map(function (o) {
@@ -423,14 +474,14 @@
     }).filter(function (r) { return r.w.status === 'Active' || r.has || ui.f.reports.worker; }).sort(function (a, b) { return byName(a.w, b.w); });
   }
   function empTotals(rows) {
-    var t = { leave: 0, normal: 0, sunday: 0, night: 0, total: 0, adv: 0 };
-    rows.forEach(function (r) { t.leave += r.leave; t.normal += r.ot.normal; t.sunday += r.ot.sunday; t.night += r.ot.night; t.total += r.ot.total; t.adv += r.adv; });
+    var t = { leave: 0, normal: 0, sunday: 0, night: 0, other: 0, total: 0, adv: 0 };
+    rows.forEach(function (r) { t.leave += r.leave; t.normal += r.ot.normal; t.sunday += r.ot.sunday; t.night += r.ot.night; t.other += r.ot.other; t.total += r.ot.total; t.adv += r.adv; });
     Object.keys(t).forEach(function (k) { t[k] = r2(t[k]); });
     return t;
   }
   function workerTotals(rows) {
-    var t = { normal: 0, sunday: 0, night: 0, total: 0 };
-    rows.forEach(function (r) { t.normal += r.ot.normal; t.sunday += r.ot.sunday; t.night += r.ot.night; t.total += r.ot.total; });
+    var t = { normal: 0, sunday: 0, night: 0, other: 0, total: 0 };
+    rows.forEach(function (r) { t.normal += r.ot.normal; t.sunday += r.ot.sunday; t.night += r.ot.night; t.other += r.ot.other; t.total += r.ot.total; });
     Object.keys(t).forEach(function (k) { t[k] = r2(t[k]); });
     return t;
   }
@@ -443,24 +494,26 @@
     }
     var er = buildEmpReport(f), wr = buildWorkerReport(f);
     var et = empTotals(er), wt = workerTotals(wr);
+    var eo = otherOn('otTypes', et), wo = otherOn('workerOtTypes', wt);
     var html = '<div class="print-head"><h2>' + esc(COMPANY) + '</h2><p>Monthly Report — <strong>' + esc(periodLabel(m)) + '</strong> · Generated ' + esc(fmtDate(todayStr())) + '</p></div>';
     html += '<div class="stats">' +
       stat('Leave Days', fmtNum(et.leave), 'Employees') + stat('Normal OT', fmtNum(et.normal), 'hours', 'y') +
       stat('Sunday / Special OT', fmtNum(et.sunday), 'hours', 'y') + stat('Night OT', fmtNum(et.night), 'hours', 'y') +
+      (eo ? stat('Other OT', fmtNum(et.other), 'hours', 'y') : '') +
       stat('Total OT', fmtNum(et.total), 'hours') + stat('Total Advance', money(et.adv), '', 'd') + '</div>';
 
     if (db.employees.length) {
       html += er.length ? cardOf('Employee Report', periodLabel(m), tbl(
-        ['Employee', 'Leave Days', 'Normal OT', 'Sunday/Special OT', 'Night OT', 'Total OT', 'Advance'],
-        er.map(function (r) { return [empCell(r.e.id), fmtNum(r.leave), fmtNum(r.ot.normal), fmtNum(r.ot.sunday), fmtNum(r.ot.night), '<strong>' + fmtNum(r.ot.total) + '</strong>', money(r.adv)]; }),
-        ['Total', fmtNum(et.leave), fmtNum(et.normal), fmtNum(et.sunday), fmtNum(et.night), fmtNum(et.total), money(et.adv)]))
+        ['Employee', 'Leave Days', 'Normal OT', 'Sunday/Special OT', 'Night OT'].concat(eo ? ['Other OT'] : [], ['Total OT', 'Advance']),
+        er.map(function (r) { return [empCell(r.e.id), fmtNum(r.leave), fmtNum(r.ot.normal), fmtNum(r.ot.sunday), fmtNum(r.ot.night)].concat(eo ? [fmtNum(r.ot.other)] : [], ['<strong>' + fmtNum(r.ot.total) + '</strong>', money(r.adv)]); }),
+        ['Total', fmtNum(et.leave), fmtNum(et.normal), fmtNum(et.sunday), fmtNum(et.night)].concat(eo ? [fmtNum(et.other)] : [], [fmtNum(et.total), money(et.adv)])))
         : cardOf('Employee Report', periodLabel(m), '<div class="card-body">' + noMatch('reports') + '</div>');
     }
     if (db.outsideWorkers.length) {
       html += wr.length ? cardOf('Outside Worker Report', periodLabel(m), tbl(
-        ['Worker', 'Source', 'Normal OT', 'Sunday/Special OT', 'Night OT', 'Total OT'],
-        wr.map(function (r) { return [workerCell(r.w.id), esc(r.w.source), fmtNum(r.ot.normal), fmtNum(r.ot.sunday), fmtNum(r.ot.night), '<strong>' + fmtNum(r.ot.total) + '</strong>']; }),
-        ['Total', '', fmtNum(wt.normal), fmtNum(wt.sunday), fmtNum(wt.night), fmtNum(wt.total)]))
+        ['Worker', 'Source', 'Normal OT', 'Sunday/Special OT', 'Night OT'].concat(wo ? ['Other OT'] : [], ['Total OT']),
+        wr.map(function (r) { return [workerCell(r.w.id), esc(r.w.source), fmtNum(r.ot.normal), fmtNum(r.ot.sunday), fmtNum(r.ot.night)].concat(wo ? [fmtNum(r.ot.other)] : [], ['<strong>' + fmtNum(r.ot.total) + '</strong>']); }),
+        ['Total', '', fmtNum(wt.normal), fmtNum(wt.sunday), fmtNum(wt.night)].concat(wo ? [fmtNum(wt.other)] : [], [fmtNum(wt.total)])))
         : cardOf('Outside Worker Report', periodLabel(m), '<div class="card-body">' + noMatch('reports') + '</div>');
     }
     // Detail when a single employee / worker is selected
@@ -510,6 +563,7 @@
       if (src === 'employees') opts = db.employees.slice().sort(byName).map(function (e) { return [e.id, e.name + ' (' + e.empId + ')']; });
       else if (src === 'workers') opts = db.outsideWorkers.slice().sort(byName).map(function (w) { return [w.id, w.name + ' (' + w.workerId + ')']; });
       else if (src === 'departments') opts = departments().map(function (d) { return [d, d]; });
+      else opts = getOpts(src);
       var cur = ui.f[view][field];
       sel.innerHTML = '<option value="">' + esc(sel.dataset.all || 'All') + '</option>' +
         opts.map(function (o) { return '<option value="' + esc(o[0]) + '">' + esc(o[1]) + '</option>'; }).join('');
@@ -578,8 +632,8 @@
         return [
           { name: 'employeeId', label: 'Employee', type: 'select', required: true, placeholder: 'Select employee', options: empOptions(rec && rec.employeeId), wide: true },
           { name: 'date', label: 'Date', type: 'date', required: true },
-          { name: 'type', label: 'Leave Type', type: 'select', required: true, options: [['Full Day', 'Full Day (1 day)'], ['Half Day', 'Half Day (0.5 day)']] },
-          { name: 'reason', label: 'Reason', type: 'text', required: true, maxlength: 150, wide: true },
+          { name: 'type', label: 'Leave Type', type: 'select', required: true, options: getOpts('leaveTypes'), addable: 'leaveTypes', addHint: 'New leave type, e.g. Sick Leave' },
+          { name: 'reason', label: 'Reason', type: 'text', maxlength: 150, wide: true, fallback: '-', hint: 'Optional — saved as "-" if left empty' },
           { name: 'notes', label: 'Notes', type: 'textarea', wide: true }
         ];
       },
@@ -597,14 +651,14 @@
         return [
           { name: 'employeeId', label: 'Employee', type: 'select', required: true, placeholder: 'Select employee', options: empOptions(rec && rec.employeeId), wide: true },
           { name: 'date', label: 'Date', type: 'date', required: true },
-          { name: 'type', label: 'OT Type', type: 'select', required: true, options: OT_OPTS },
+          { name: 'type', label: 'OT Type', type: 'select', required: true, options: getOpts('otTypes'), addable: 'otTypes', addHint: 'New OT type, e.g. Holiday OT' },
           { name: 'hours', label: 'Hours', type: 'number', required: true, positive: true, max: MAX_HOURS, step: '0.01', hint: 'e.g. 1.5, 2.5, 3.75' },
           { name: 'notes', label: 'Notes', type: 'textarea', wide: true }
         ];
       },
       defaults: function () { return { date: todayStr(), type: 'normal' }; },
       validate: function () { return null; },
-      describe: function (r) { return (OT_TYPES[r.type] || 'OT') + ' of ' + empName(r.employeeId) + ' on ' + r.date; }
+      describe: function (r) { return otLabel(r.type) + ' of ' + empName(r.employeeId) + ' on ' + r.date; }
     },
     advances: {
       title: 'Advance', coll: 'advances', needs: NEED_EMP,
@@ -628,7 +682,7 @@
           { name: 'workerId', label: 'Worker ID', type: 'text', required: true, maxlength: 30 },
           { name: 'name', label: 'Worker Name', type: 'text', required: true, maxlength: 100 },
           { name: 'phone', label: 'Phone', type: 'tel', maxlength: 25 },
-          { name: 'source', label: 'Source', type: 'select', required: true, options: [['From Company', 'From Company'], ['Others', 'Others']] },
+          { name: 'source', label: 'Source', type: 'select', required: true, options: getOpts('sources'), addable: 'sources', addHint: 'New source, e.g. Contractor' },
           { name: 'status', label: 'Status', type: 'select', required: true, options: STATUS_OPTS }
         ];
       },
@@ -647,14 +701,14 @@
         return [
           { name: 'workerId', label: 'Worker', type: 'select', required: true, placeholder: 'Select worker', options: workerOptions(rec && rec.workerId), wide: true },
           { name: 'date', label: 'Date', type: 'date', required: true },
-          { name: 'type', label: 'OT Type', type: 'select', required: true, options: [['normal', 'Normal OT'], ['sunday', 'Sunday / Special OT'], ['night', 'Night OT']] },
+          { name: 'type', label: 'OT Type', type: 'select', required: true, options: getOpts('workerOtTypes'), addable: 'workerOtTypes', addHint: 'New OT type, e.g. Holiday OT' },
           { name: 'hours', label: 'Hours', type: 'number', required: true, positive: true, max: MAX_HOURS, step: '0.01', hint: 'e.g. 1.5, 2.5, 3.75' },
           { name: 'notes', label: 'Notes', type: 'textarea', wide: true }
         ];
       },
       defaults: function () { return { date: todayStr(), type: 'normal' }; },
       validate: function () { return null; },
-      describe: function (r) { return (OT_TYPES[r.type] || 'OT') + ' of ' + workerName(r.workerId) + ' on ' + r.date; }
+      describe: function (r) { return otLabel(r.type) + ' of ' + workerName(r.workerId) + ' on ' + r.date; }
     }
   };
 
@@ -662,17 +716,62 @@
     var v = val == null ? '' : val, input;
     if (f.type === 'select') {
       input = '<select name="' + f.name + '">' + (f.placeholder ? '<option value="">' + esc(f.placeholder) + '</option>' : '') +
-        f.options.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(v) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>';
+        f.options.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(v) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>' + (f.addable ? addControls(f) : '');
     } else if (f.type === 'textarea') {
       input = '<textarea name="' + f.name + '" rows="3" maxlength="500">' + esc(v) + '</textarea>';
     } else if (f.type === 'number') {
       input = '<input name="' + f.name + '" type="number" inputmode="decimal" min="0" step="' + (f.step || 'any') + '" value="' + esc(v) + '" placeholder="' + (f.hint ? esc(f.hint) : '0') + '">';
     } else {
       input = '<input name="' + f.name + '" type="' + f.type + '" value="' + esc(v) + '"' +
-        (f.maxlength ? ' maxlength="' + f.maxlength + '"' : '') + (f.list ? ' list="dl-' + f.name + '"' : '') + ' autocomplete="off">' +
+        (f.maxlength ? ' maxlength="' + f.maxlength + '"' : '') + (f.hint ? ' placeholder="' + esc(f.hint) + '"' : '') + (f.list ? ' list="dl-' + f.name + '"' : '') + ' autocomplete="off">' +
         (f.list ? '<datalist id="dl-' + f.name + '">' + f.list.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>' : '');
     }
     return '<label class="fld' + (f.wide ? ' wide' : '') + '"><span>' + esc(f.label) + (f.required ? ' <b>*</b>' : '') + '</span>' + input + '</label>';
+  }
+
+  function optionsHtml(opts, sel) {
+    return opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(sel) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
+  }
+  function addControls(f) {
+    return '<button type="button" class="link-btn" data-action="toggle-add">+ Add new</button>' +
+      '<div class="addrow hidden" data-list="' + f.addable + '" data-select="' + f.name + '">' +
+      '<input type="text" class="add-name" maxlength="40" placeholder="' + esc(f.addHint || 'New option') + '" autocomplete="off">' +
+      (f.addable === 'leaveTypes' ? '<select class="add-days" aria-label="Days counted"><option value="1">Counts as 1 day</option><option value="0.5">Counts as 0.5 day</option></select>' : '') +
+      '<button type="button" class="btn btn-sm btn-accent" data-action="save-option">Add</button></div>';
+  }
+  function allNames(list) {
+    var o = db.appSettings.options;
+    if (list === 'leaveTypes') return ['Full Day', 'Half Day'].concat(o.leaveTypes.map(function (x) { return x.name; }));
+    if (list === 'sources') return SOURCE_BUILTIN.map(function (x) { return x[1]; }).concat(o.sources);
+    var base = list === 'otTypes' ? EMP_OT_BUILTIN : WORKER_OT_BUILTIN;
+    return base.map(function (x) { return x[1]; }).concat(o[list].map(function (x) { return x.name; }));
+  }
+  function toggleAdd(btn) {
+    var row = btn.parentNode.querySelector('.addrow');
+    if (!row) return;
+    row.classList.toggle('hidden');
+    if (!row.classList.contains('hidden')) row.querySelector('.add-name').focus();
+  }
+  function saveOption(el) {
+    var row = el.closest('.addrow'); if (!row) return;
+    var list = row.dataset.list, form = el.closest('form'), inp = row.querySelector('.add-name');
+    var name = inp.value.trim().replace(/\s+/g, ' ');
+    if (!name) { inp.classList.add('invalid'); inp.focus(); toast('Enter a name first.', 'error'); return; }
+    if (allNames(list).some(function (n) { return n.toLowerCase() === name.toLowerCase(); })) {
+      inp.classList.add('invalid'); inp.focus(); toast('"' + name + '" already exists.', 'error'); return;
+    }
+    inp.classList.remove('invalid');
+    var o = db.appSettings.options, val;
+    if (list === 'leaveTypes') { o.leaveTypes.push({ name: name, days: Number(row.querySelector('.add-days').value) || 1 }); val = name; }
+    else if (list === 'sources') { o.sources.push(name); val = name; }
+    else { val = 'x' + uid(); o[list].push({ id: val, name: name }); }
+    save('appSettings');
+    var sel = form.elements[row.dataset.select];
+    sel.innerHTML = optionsHtml(getOpts(list), val);
+    sel.value = val;
+    inp.value = ''; row.classList.add('hidden');
+    populateSelects();
+    toast('"' + name + '" added and selected.');
   }
 
   function openForm(kind, id) {
@@ -707,6 +806,7 @@
     }
     for (var i = 0; i < fields.length; i++) {
       var f = fields[i], el = form.elements[f.name], v = el ? String(el.value).trim() : '';
+      if (!v && f.fallback) v = f.fallback;
       if (f.required && !v) { fail(f, f.label + ' is required.'); return; }
       if (f.type === 'date' && v && !isDate(v)) { fail(f, 'Enter a valid ' + f.label.toLowerCase() + '.'); return; }
       if (f.type === 'number') {
@@ -809,7 +909,7 @@
       if (dated.indexOf(key) !== -1 && !isDate(String(x.date || ''))) { skipped++; return; }
       if (key === 'employeeOT' || key === 'outsideWorkerOT') {
         var h = Number(x.hours);
-        if (!isFinite(h) || h < 0 || !OT_TYPES[x.type]) { skipped++; return; }
+        if (!isFinite(h) || h < 0 || !x.type || typeof x.type !== 'string') { skipped++; return; }
         x.hours = r2(h);
       }
       if (key === 'advances') {
@@ -834,6 +934,7 @@
         var s = data[k] && typeof data[k] === 'object' && !Array.isArray(data[k]) ? data[k] : {};
         var cur = typeof s.currency === 'string' && s.currency.trim() && s.currency.length <= 6 ? s.currency.trim() : DEFAULT_SETTINGS.currency;
         out[k] = Object.assign({}, DEFAULT_SETTINGS, s, { currency: cur });
+        out[k].options = normOptions(s.options);
       } else {
         if (!Array.isArray(data[k])) throw new Error('"' + k + '" in this file is not a list — the backup looks damaged.');
         var c = cleanList(k, data[k]); out[k] = c.out; skipped += c.skipped;
@@ -892,19 +993,21 @@
       var rows = buildEmpReport(f);
       if (!rows.length) { toast('No employee data to export.', 'error'); return; }
       var t = empTotals(rows);
+      var eo = otherOn('otTypes', t);
       lines = [[COMPANY], ['Employee Monthly Report'], ['Month', periodLabel(m)], ['Generated', todayStr()], [],
-        ['Employee ID', 'Employee', 'Leave Days', 'Normal OT', 'Sunday/Special OT', 'Night OT', 'Total OT', 'Advance']]
-        .concat(rows.map(function (r) { return [r.e.empId, r.e.name, r.leave, r.ot.normal, r.ot.sunday, r.ot.night, r.ot.total, r.adv]; }))
-        .concat([['TOTAL', '', t.leave, t.normal, t.sunday, t.night, t.total, t.adv]]);
+        ['Employee ID', 'Employee', 'Leave Days', 'Normal OT', 'Sunday/Special OT', 'Night OT'].concat(eo ? ['Other OT'] : [], ['Total OT', 'Advance'])]
+        .concat(rows.map(function (r) { return [r.e.empId, r.e.name, r.leave, r.ot.normal, r.ot.sunday, r.ot.night].concat(eo ? [r.ot.other] : [], [r.ot.total, r.adv]); }))
+        .concat([['TOTAL', '', t.leave, t.normal, t.sunday, t.night].concat(eo ? [t.other] : [], [t.total, t.adv])]);
       name = 'ameer-fire-safety-employee-report-' + (m || 'all-months') + '.csv';
     } else {
       var wrows = buildWorkerReport(f);
       if (!wrows.length) { toast('No outside worker data to export.', 'error'); return; }
       var wt = workerTotals(wrows);
+      var wo = otherOn('workerOtTypes', wt);
       lines = [[COMPANY], ['Outside Worker Monthly Report'], ['Month', periodLabel(m)], ['Generated', todayStr()], [],
-        ['Worker ID', 'Worker', 'Source', 'Normal OT', 'Sunday/Special OT', 'Night OT', 'Total OT']]
-        .concat(wrows.map(function (r) { return [r.w.workerId, r.w.name, r.w.source, r.ot.normal, r.ot.sunday, r.ot.night, r.ot.total]; }))
-        .concat([['TOTAL', '', '', wt.normal, wt.sunday, wt.night, wt.total]]);
+        ['Worker ID', 'Worker', 'Source', 'Normal OT', 'Sunday/Special OT', 'Night OT'].concat(wo ? ['Other OT'] : [], ['Total OT'])]
+        .concat(wrows.map(function (r) { return [r.w.workerId, r.w.name, r.w.source, r.ot.normal, r.ot.sunday, r.ot.night].concat(wo ? [r.ot.other] : [], [r.ot.total]); }))
+        .concat([['TOTAL', '', '', wt.normal, wt.sunday, wt.night].concat(wo ? [wt.other] : [], [wt.total])]);
       name = 'ameer-fire-safety-outside-worker-report-' + (m || 'all-months') + '.csv';
     }
     download(name, '\ufeff' + lines.map(csvLine).join('\r\n'), 'text/csv;charset=utf-8');
@@ -947,6 +1050,8 @@
       case 'all-months': ui.f[el.dataset.view].month = ''; syncFilterInputs(el.dataset.view); renderView(el.dataset.view); break;
       case 'toggle-menu': toggleMenu(); break;
       case 'close-modal': closeModal(); break;
+      case 'toggle-add': toggleAdd(el); break;
+      case 'save-option': saveOption(el); break;
       case 'export-json': toast('Backup downloaded: ' + exportJSON()); break;
       case 'import-json': $('#import-file').click(); break;
       case 'export-drive': exportToDrive(); break;
@@ -972,6 +1077,7 @@
     if (e.target.id === 'rec-form') { e.preventDefault(); submitForm(e.target); }
   });
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('add-name')) { e.preventDefault(); saveOption(e.target); return; }
     if (e.key === 'Escape') { if ($('#modal-root').classList.contains('open')) closeModal(); else toggleMenu(false); }
   });
   window.addEventListener('hashchange', function () { showView(location.hash.slice(1)); });

@@ -93,7 +93,7 @@
         <div class="filters card">
           <label>Month<input type="month" data-f="leaves.month"></label>
           <label>Employee<select data-f="leaves.emp" data-src="employees" data-all="All employees"></select></label>
-          <label>Leave Type<select data-f="leaves.type"><option value="">All</option><option>Full Day</option><option>Half Day</option></select></label>
+          <label>Leave Type<select data-f="leaves.type" data-src="leaveTypes" data-all="All types"></select></label>
           <label class="grow">Search<input type="search" data-f="leaves.q" placeholder="Name, reason, notes…"></label>
           <button class="btn btn-ghost" data-action="clear-filters" data-view="leaves">Clear Filters</button>
         </div>
@@ -110,7 +110,7 @@
         <div class="filters card">
           <label>Month<input type="month" data-f="ot.month"></label>
           <label>Employee<select data-f="ot.emp" data-src="employees" data-all="All employees"></select></label>
-          <label>OT Type<select data-f="ot.type"><option value="">All types</option><option value="normal">Normal Hour OT</option><option value="sunday">Sunday / Special OT</option><option value="night">Night OT</option></select></label>
+          <label>OT Type<select data-f="ot.type" data-src="otTypes" data-all="All types"></select></label>
           <label class="grow">Search<input type="search" data-f="ot.q" placeholder="Name, notes…"></label>
           <button class="btn btn-ghost" data-action="clear-filters" data-view="ot">Clear Filters</button>
         </div>
@@ -142,7 +142,7 @@
         </div>
         <div class="filters card">
           <label class="grow">Search<input type="search" data-f="outsiders.q" placeholder="Worker ID, name, phone…"></label>
-          <label>Worker Source<select data-f="outsiders.source"><option value="">All sources</option><option>From Company</option><option>Others</option></select></label>
+          <label>Worker Source<select data-f="outsiders.source" data-src="sources" data-all="All sources"></select></label>
           <label>Status<select data-f="outsiders.status"><option value="">All</option><option>Active</option><option>Inactive</option></select></label>
           <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiders">Clear Filters</button>
         </div>
@@ -158,8 +158,8 @@
         <div class="filters card">
           <label>Month<input type="month" data-f="outsiderOT.month"></label>
           <label>Worker<select data-f="outsiderOT.worker" data-src="workers" data-all="All workers"></select></label>
-          <label>OT Type<select data-f="outsiderOT.type"><option value="">All types</option><option value="normal">Normal OT</option><option value="sunday">Sunday / Special OT</option><option value="night">Night OT</option></select></label>
-          <label>Worker Source<select data-f="outsiderOT.source"><option value="">All sources</option><option>From Company</option><option>Others</option></select></label>
+          <label>OT Type<select data-f="outsiderOT.type" data-src="workerOtTypes" data-all="All types"></select></label>
+          <label>Worker Source<select data-f="outsiderOT.source" data-src="sources" data-all="All sources"></select></label>
           <label class="grow">Search<input type="search" data-f="outsiderOT.q" placeholder="Name, notes…"></label>
           <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiderOT">Clear Filters</button>
         </div>
@@ -181,7 +181,7 @@
           <label>Month<input type="month" data-f="reports.month"></label>
           <label>Employee<select data-f="reports.emp" data-src="employees" data-all="All employees"></select></label>
           <label>Worker<select data-f="reports.worker" data-src="workers" data-all="All workers"></select></label>
-          <label>Worker Source<select data-f="reports.source"><option value="">All sources</option><option>From Company</option><option>Others</option></select></label>
+          <label>Worker Source<select data-f="reports.source" data-src="sources" data-all="All sources"></select></label>
           <label class="grow">Search<input type="search" data-f="reports.q" placeholder="Name or ID…"></label>
           <button class="btn" data-action="all-months" data-view="reports">All Months</button>
           <button class="btn btn-ghost" data-action="clear-filters" data-view="reports">Clear Filters</button>

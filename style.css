@@ -129,6 +129,7 @@ td.wrap,.wrap{white-space:normal;max-width:260px;word-break:break-word}
 .b-night{background:var(--slate-l);color:var(--slate)}
 .b-full{background:var(--red-l);color:var(--red-d)}
 .b-half{background:var(--yellow-l);color:#7a5400}
+.b-other{background:#eceef1;color:#374151}
 
 /* ===== Empty states ===== */
 .empty{background:#fff;border:2px dashed #e3d9b8;border-radius:var(--radius);padding:36px 20px;text-align:center;margin-bottom:16px}
@@ -171,6 +172,10 @@ body.modal-open{overflow:hidden}
 .fld.wide{grid-column:1/-1}
 .fld b{color:var(--red)}
 .confirm-msg{line-height:1.55}
+.link-btn{align-self:flex-start;background:none;border:0;padding:2px 0;color:var(--red-d);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:underline}
+.addrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.addrow .add-name{flex:1 1 170px}
+.addrow .add-days{width:auto;flex:0 0 auto}
 
 /* ===== Toasts ===== */
 #toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:200;max-width:min(380px,calc(100vw - 32px))}
