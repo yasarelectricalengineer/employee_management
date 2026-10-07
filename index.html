@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ameer Fire and Safety — Employee, Leave, OT &amp; Advance Management</title>
+<meta name="theme-color" content="#D62828">
+<meta name="description" content="Employee, leave, overtime and advance management for Ameer Fire and Safety. Runs fully in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z' fill='%23D62828'/%3E%3Cpath d='M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z' fill='%23FFB703'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<noscript><div class="banner">This app needs JavaScript enabled to work.</div></noscript>
+
+<div class="app">
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" width="38" height="38" aria-hidden="true">
+        <path d="M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z" fill="#D62828"/>
+        <path d="M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z" fill="#FFB703"/>
+      </svg>
+      <div class="brand-text">
+        <strong>Ameer Fire and Safety</strong>
+        <span>Staff · Leave · OT · Advance</span>
+      </div>
+    </div>
+    <nav id="nav">
+      <a href="#dashboard" data-view="dashboard"><span class="ico" data-ico="dashboard"></span>Dashboard</a>
+      <a href="#employees" data-view="employees"><span class="ico" data-ico="users"></span>Employees</a>
+      <a href="#leaves" data-view="leaves"><span class="ico" data-ico="calendar"></span>Leave</a>
+      <a href="#ot" data-view="ot"><span class="ico" data-ico="clock"></span>Employee OT</a>
+      <a href="#advances" data-view="advances"><span class="ico" data-ico="coin"></span>Advance</a>
+      <div class="nav-sep">Outside Workers</div>
+      <a href="#outsiders" data-view="outsiders"><span class="ico" data-ico="hardhat"></span>Outside Workers</a>
+      <a href="#outsiderOT" data-view="outsiderOT"><span class="ico" data-ico="clock"></span>Outside Worker OT</a>
+      <div class="nav-sep">Output</div>
+      <a href="#reports" data-view="reports"><span class="ico" data-ico="report"></span>Monthly Reports</a>
+      <a href="#backup" data-view="backup"><span class="ico" data-ico="database"></span>Backup &amp; Drive</a>
+    </nav>
+    <div class="side-foot">Data is saved only in this browser. Export a backup regularly.</div>
+  </aside>
+  <div class="scrim" id="scrim" data-action="toggle-menu"></div>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" data-action="toggle-menu" aria-label="Open menu"><span class="ico" data-ico="menu"></span></button>
+      <h1 class="top-title" id="top-title">Dashboard</h1>
+      <div class="top-actions"><button class="btn btn-sm" data-action="export-json">Download Backup</button></div>
+    </header>
+
+    <div id="storage-warning" class="banner hidden">
+      Browser storage is unavailable or blocked (private mode?). Data will <strong>not</strong> be saved after you close this page. Download a backup before leaving.
+    </div>
+
+    <main class="content">
+
+      <!-- Dashboard -->
+      <section class="view" id="view-dashboard">
+        <div class="view-head">
+          <div><h2>Dashboard</h2><p>Overview of staff, leave, overtime and advances.</p></div>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="dashboard.month"></label>
+          <button class="btn" data-action="all-months" data-view="dashboard">All Months</button>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="dashboard">Clear Filters</button>
+        </div>
+        <div id="dashboard-body"></div>
+      </section>
+
+      <!-- Employees -->
+      <section class="view" id="view-employees">
+        <div class="view-head">
+          <div><h2>Employees</h2><p id="employees-count">Manage your staff records.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="employees">+ Add Employee</button>
+        </div>
+        <div class="filters card">
+          <label class="grow">Search<input type="search" data-f="employees.q" placeholder="ID, name, phone, designation…"></label>
+          <label>Status<select data-f="employees.status"><option value="">All</option><option>Active</option><option>Inactive</option></select></label>
+          <label>Department<select data-f="employees.dept" data-src="departments" data-all="All departments"></select></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="employees">Clear Filters</button>
+        </div>
+        <div id="employees-table"></div>
+      </section>
+
+      <!-- Leave -->
+      <section class="view" id="view-leaves">
+        <div class="view-head">
+          <div><h2>Leave Management</h2><p>Full day = 1 day, half day = 0.5 day.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="leaves">+ Add Leave</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="leaves.month"></label>
+          <label>Employee<select data-f="leaves.emp" data-src="employees" data-all="All employees"></select></label>
+          <label>Leave Type<select data-f="leaves.type"><option value="">All</option><option>Full Day</option><option>Half Day</option></select></label>
+          <label class="grow">Search<input type="search" data-f="leaves.q" placeholder="Name, reason, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="leaves">Clear Filters</button>
+        </div>
+        <div id="leaves-summary"></div>
+        <div id="leaves-table"></div>
+      </section>
+
+      <!-- Employee OT -->
+      <section class="view" id="view-ot">
+        <div class="view-head">
+          <div><h2>Employee OT</h2><p>Normal, Sunday / Special and Night overtime. Decimals like 1.5 or 3.75 are supported.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="ot">+ Add OT</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="ot.month"></label>
+          <label>Employee<select data-f="ot.emp" data-src="employees" data-all="All employees"></select></label>
+          <label>OT Type<select data-f="ot.type"><option value="">All types</option><option value="normal">Normal Hour OT</option><option value="sunday">Sunday / Special OT</option><option value="night">Night OT</option></select></label>
+          <label class="grow">Search<input type="search" data-f="ot.q" placeholder="Name, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="ot">Clear Filters</button>
+        </div>
+        <div id="ot-summary"></div>
+        <div id="ot-table"></div>
+      </section>
+
+      <!-- Advances -->
+      <section class="view" id="view-advances">
+        <div class="view-head">
+          <div><h2>Advances</h2><p>Monthly and employee-wise totals are calculated automatically.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="advances">+ Add Advance</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="advances.month"></label>
+          <label>Employee<select data-f="advances.emp" data-src="employees" data-all="All employees"></select></label>
+          <label class="grow">Search<input type="search" data-f="advances.q" placeholder="Name, reason, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="advances">Clear Filters</button>
+        </div>
+        <div id="advances-summary"></div>
+        <div id="advances-table"></div>
+      </section>
+
+      <!-- Outside Workers -->
+      <section class="view" id="view-outsiders">
+        <div class="view-head">
+          <div><h2>Outside Workers</h2><p>Kept completely separate from company employees.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="outsiders">+ Add Worker</button>
+        </div>
+        <div class="filters card">
+          <label class="grow">Search<input type="search" data-f="outsiders.q" placeholder="Worker ID, name, phone…"></label>
+          <label>Worker Source<select data-f="outsiders.source"><option value="">All sources</option><option>From Company</option><option>Others</option></select></label>
+          <label>Status<select data-f="outsiders.status"><option value="">All</option><option>Active</option><option>Inactive</option></select></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiders">Clear Filters</button>
+        </div>
+        <div id="outsiders-table"></div>
+      </section>
+
+      <!-- Outside Worker OT -->
+      <section class="view" id="view-outsiderOT">
+        <div class="view-head">
+          <div><h2>Outside Worker OT</h2><p>Separate overtime records for outside workers.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="outsiderOT">+ Add Worker OT</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="outsiderOT.month"></label>
+          <label>Worker<select data-f="outsiderOT.worker" data-src="workers" data-all="All workers"></select></label>
+          <label>OT Type<select data-f="outsiderOT.type"><option value="">All types</option><option value="normal">Normal OT</option><option value="sunday">Sunday / Special OT</option><option value="night">Night OT</option></select></label>
+          <label>Worker Source<select data-f="outsiderOT.source"><option value="">All sources</option><option>From Company</option><option>Others</option></select></label>
+          <label class="grow">Search<input type="search" data-f="outsiderOT.q" placeholder="Name, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiderOT">Clear Filters</button>
+        </div>
+        <div id="outsiderOT-summary"></div>
+        <div id="outsiderOT-table"></div>
+      </section>
+
+      <!-- Reports -->
+      <section class="view" id="view-reports">
+        <div class="view-head no-print">
+          <div><h2>Monthly Reports</h2><p>Employee-wise and outside-worker reports. Print or export to CSV.</p></div>
+          <div class="head-actions">
+            <button class="btn btn-primary" data-action="print-report">Print Report</button>
+            <button class="btn" data-action="csv-emp">Employee CSV</button>
+            <button class="btn" data-action="csv-out">Outside Worker CSV</button>
+          </div>
+        </div>
+        <div class="filters card no-print">
+          <label>Month<input type="month" data-f="reports.month"></label>
+          <label>Employee<select data-f="reports.emp" data-src="employees" data-all="All employees"></select></label>
+          <label>Worker<select data-f="reports.worker" data-src="workers" data-all="All workers"></select></label>
+          <label>Worker Source<select data-f="reports.source"><option value="">All sources</option><option>From Company</option><option>Others</option></select></label>
+          <label class="grow">Search<input type="search" data-f="reports.q" placeholder="Name or ID…"></label>
+          <button class="btn" data-action="all-months" data-view="reports">All Months</button>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="reports">Clear Filters</button>
+        </div>
+        <div id="reports-body"></div>
+      </section>
+
+      <!-- Backup -->
+      <section class="view" id="view-backup">
+        <div class="view-head">
+          <div><h2>Backup &amp; Google Drive</h2><p>Your data lives only in this browser. Back it up regularly.</p></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Backup / Restore</h3></div>
+          <div class="card-body">
+            <div id="backup-summary"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" data-action="export-json">Export JSON Backup</button>
+              <button class="btn" data-action="import-json">Import JSON Backup</button>
+            </div>
+            <p class="hint">Export downloads <code>ameer-fire-safety-backup-YYYY-MM-DD.json</code>. Import replaces all data in this browser with the contents of the file.</p>
+          </div>
+        </div>
+
+        <div class="card" id="drive-card">
+          <div class="card-head"><h3>Google Drive</h3></div>
+          <div class="card-body">
+            <p class="note"><strong>Manual process.</strong> This app does not connect to Google Drive and cannot upload or read files automatically. The buttons below download the backup and open your Drive folder so you can upload or download the file yourself.</p>
+            <div class="btn-row">
+              <button class="btn btn-accent" data-action="export-drive">Export to Drive</button>
+              <button class="btn" data-action="import-drive">Import From Drive</button>
+              <a class="btn btn-ghost" href="https://drive.google.com/drive/folders/12FOBPx6i20ETWm7WgNl1muJILucahRjl?usp=drive_link" target="_blank" rel="noopener noreferrer">Open Drive folder</a>
+            </div>
+            <div class="steps" id="drive-steps">
+              <div>
+                <h4>Export to Drive</h4>
+                <ol>
+                  <li>Click <strong>Export to Drive</strong>. The JSON backup downloads automatically.</li>
+                  <li>The Drive folder opens in a new tab.</li>
+                  <li>Drag the downloaded file into that folder.</li>
+                </ol>
+              </div>
+              <div>
+                <h4>Import From Drive</h4>
+                <ol>
+                  <li>Click <strong>Import From Drive</strong>. The Drive folder opens in a new tab.</li>
+                  <li>Download the backup JSON you want to restore.</li>
+                  <li>Come back here and select that file:</li>
+                </ol>
+                <button class="btn btn-primary btn-sm" data-action="import-json">Select downloaded JSON file</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Settings</h3></div>
+          <div class="card-body">
+            <label class="inline-field">Currency label for advances
+              <input id="currency-input" type="text" maxlength="6" placeholder="AED">
+            </label>
+            <p class="hint">Shown next to advance amounts. Saved automatically.</p>
+          </div>
+        </div>
+
+        <div class="card danger-zone">
+          <div class="card-head"><h3>Danger zone</h3></div>
+          <div class="card-body">
+            <p class="hint">Permanently deletes every employee, leave, OT, advance and outside worker record from this browser. Export a backup first.</p>
+            <button class="btn btn-danger" data-action="clear-all">Delete All Data</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div id="modal-root" aria-live="polite"></div>
+<div id="toasts" aria-live="polite"></div>
+<input type="file" id="import-file" accept=".json,application/json" hidden>
+
+<script src="app.js"></script>
+</body>
+</html>
