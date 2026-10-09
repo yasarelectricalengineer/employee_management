@@ -173,8 +173,9 @@ body.modal-open{overflow:hidden}
 .fld b{color:var(--red)}
 .confirm-msg{line-height:1.55}
 .link-btn{align-self:flex-start;background:none;border:0;padding:2px 0;color:var(--red-d);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:underline}
+.opt-links{display:flex;gap:16px;flex-wrap:wrap}
 .addrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.addrow .add-name{flex:1 1 170px}
+.addrow input{flex:1 1 150px}
 .addrow .add-days{width:auto;flex:0 0 auto}
 
 /* ===== Toasts ===== */
