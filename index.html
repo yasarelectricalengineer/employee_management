@@ -33,7 +33,6 @@
       <a href="#advances" data-view="advances"><span class="ico" data-ico="coin"></span>Advance</a>
       <div class="nav-sep">Outside Workers</div>
       <a href="#outsiders" data-view="outsiders"><span class="ico" data-ico="hardhat"></span>Outside Workers</a>
-      <a href="#outsiderWork" data-view="outsiderWork"><span class="ico" data-ico="calendar"></span>Outside Worker Work</a>
       <a href="#outsiderOT" data-view="outsiderOT"><span class="ico" data-ico="clock"></span>Outside Worker OT</a>
       <div class="nav-sep">Output</div>
       <a href="#reports" data-view="reports"><span class="ico" data-ico="report"></span>Monthly Reports</a>
@@ -148,24 +147,6 @@
           <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiders">Clear Filters</button>
         </div>
         <div id="outsiders-table"></div>
-      </section>
-
-      <!-- Outside Worker Work -->
-      <section class="view" id="view-outsiderWork">
-        <div class="view-head">
-          <div><h2>Outside Worker Work</h2><p>Record the days outside workers worked — one day at a time, or many days at once. Full day = 1, half day = 0.5.</p></div>
-          <button class="btn btn-primary" data-action="add" data-kind="outsiderWork">+ Add Work</button>
-        </div>
-        <div class="filters card">
-          <label>Month<input type="month" data-f="outsiderWork.month"></label>
-          <label>Worker<select data-f="outsiderWork.worker" data-src="workers" data-all="All workers"></select></label>
-          <label>Day Type<select data-f="outsiderWork.type"><option value="">All</option><option>Full Day</option><option>Half Day</option></select></label>
-          <label>Worker Source<select data-f="outsiderWork.source" data-src="sources" data-all="All sources"></select></label>
-          <label class="grow">Search<input type="search" data-f="outsiderWork.q" placeholder="Worker, work / site, notes…"></label>
-          <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiderWork">Clear Filters</button>
-        </div>
-        <div id="outsiderWork-summary"></div>
-        <div id="outsiderWork-table"></div>
       </section>
 
       <!-- Outside Worker OT -->

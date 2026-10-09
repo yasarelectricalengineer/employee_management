@@ -6,7 +6,7 @@
   /* ================= Constants ================= */
   var COMPANY = 'Ameer Fire and Safety';
   var DRIVE_URL = 'https://drive.google.com/drive/folders/12FOBPx6i20ETWm7WgNl1muJILucahRjl?usp=drive_link';
-  var DATA_KEYS = ['employees', 'leaves', 'employeeOT', 'advances', 'outsideWorkers', 'outsideWorkerWork', 'outsideWorkerOT'];
+  var DATA_KEYS = ['employees', 'leaves', 'employeeOT', 'advances', 'outsideWorkers', 'outsideWorkerOT'];
   var ALL_KEYS = DATA_KEYS.concat(['appSettings']);
   var OT_TYPES = { normal: 'Normal Hour OT', sunday: 'Sunday / Special OT', night: 'Night OT' };
   var DEFAULT_SETTINGS = { currency: 'AED', lastBackup: null };
@@ -46,10 +46,10 @@
     (Array.isArray(o.sources) ? o.sources : []).forEach(function (x) { var n = nm(x); if (n) r.sources.push(n); });
     return r;
   }
-  var VIEWS = ['dashboard', 'employees', 'leaves', 'ot', 'advances', 'outsiders', 'outsiderWork', 'outsiderOT', 'reports', 'backup'];
+  var VIEWS = ['dashboard', 'employees', 'leaves', 'ot', 'advances', 'outsiders', 'outsiderOT', 'reports', 'backup'];
   var TITLES = {
     dashboard: 'Dashboard', employees: 'Employees', leaves: 'Leave Management', ot: 'Employee OT',
-    advances: 'Advances', outsiders: 'Outside Workers', outsiderWork: 'Outside Worker Work', outsiderOT: 'Outside Worker OT',
+    advances: 'Advances', outsiders: 'Outside Workers', outsiderOT: 'Outside Worker OT',
     reports: 'Monthly Reports', backup: 'Backup & Google Drive'
   };
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -174,7 +174,6 @@
     ot: function () { return { month: '', emp: '', type: '', q: '' }; },
     advances: function () { return { month: '', emp: '', q: '' }; },
     outsiders: function () { return { q: '', source: '', status: '' }; },
-    outsiderWork: function () { return { month: '', worker: '', type: '', source: '', q: '' }; },
     outsiderOT: function () { return { month: '', worker: '', type: '', source: '', q: '' }; },
     reports: function () { return { month: monthNow(), emp: '', worker: '', source: '', q: '' }; }
   };
@@ -270,10 +269,8 @@
     return '<div class="empty small"><p>No records match your filters.</p><button class="btn btn-sm" data-action="clear-filters" data-view="' + view + '">Clear Filters</button></div>';
   }
   function actions(kind, id) {
-    var at = ' data-kind="' + kind + '" data-id="' + esc(id) + '"';
-    return '<div class="row-actions"><button class="btn btn-sm" data-action="edit"' + at + '>Edit</button>' +
-      '<button class="btn btn-sm" data-action="duplicate"' + at + '>Duplicate</button>' +
-      '<button class="btn btn-sm btn-danger-o" data-action="delete"' + at + '>Delete</button></div>';
+    return '<div class="row-actions"><button class="btn btn-sm" data-action="edit" data-kind="' + kind + '" data-id="' + esc(id) + '">Edit</button>' +
+      '<button class="btn btn-sm btn-danger-o" data-action="delete" data-kind="' + kind + '" data-id="' + esc(id) + '">Delete</button></div>';
   }
   function statusBadge(s) { return '<span class="badge ' + (s === 'Active' ? 'b-active' : 'b-inactive') + '">' + esc(s || '—') + '</span>'; }
   function otLabel(t) {
@@ -314,7 +311,6 @@
     var leaves = db.leaves.filter(function (l) { return inMonth(l, m); });
     var ot = sumOT(db.employeeOT.filter(function (o) { return inMonth(o, m); }));
     var oot = sumOT(db.outsideWorkerOT.filter(function (o) { return inMonth(o, m); }));
-    var wdList = db.outsideWorkerWork.filter(function (x) { return inMonth(x, m); });
     var adv = sumAdv(db.advances.filter(function (a) { return inMonth(a, m); }));
     var activeE = db.employees.filter(function (e) { return e.status === 'Active'; }).length;
     var activeW = db.outsideWorkers.filter(function (w) { return w.status === 'Active'; }).length;
@@ -337,9 +333,8 @@
       stat('Total OT Hours', fmtNum(ot.total), 'Employees') +
       stat('Total Advance', money(adv), m ? 'Given in ' + esc(monthLabel(m)) : 'All time', 'd') +
       '</div>';
-    html += cardOf('Outside Workers — Work & OT', periodLabel(m),
+    html += cardOf('Outside Worker OT', periodLabel(m),
       '<div class="card-body"><div class="stats small" style="margin:0">' +
-      stat('Work Days', fmtNum(sumLeave(wdList)), fmtNum(wdList.length) + ' entr' + (wdList.length === 1 ? 'y' : 'ies')) +
       stat(Lb.normal, fmtNum(oot.normal), '', 'y') + stat(Lb.sunday, fmtNum(oot.sunday), '', 'y') +
       (otherOn('workerOtTypes', oot) ? stat('Other OT', fmtNum(oot.other), '', 'y') : '') +
       stat('Total', fmtNum(oot.total), 'hours') + '</div></div>');
@@ -457,34 +452,6 @@
       rows.map(function (w) { return [esc(w.workerId), '<strong>' + esc(w.name) + '</strong>', dash(w.phone), esc(w.source), statusBadge(w.status), actions('outsiders', w.id)]; })));
   }
 
-  function renderOutsiderWork() {
-    var f = ui.f.outsiderWork, m = vm(f.month);
-    var box = $('#outsiderWork-table'), sum = $('#outsiderWork-summary');
-    if (!db.outsideWorkerWork.length) { sum.innerHTML = ''; box.innerHTML = emptyState('No work recorded', 'Add the days your outside workers worked — one day at a time, or many days at once.', '+ Add Work', 'outsiderWork'); return; }
-    var rows = db.outsideWorkerWork.filter(function (x) {
-      var w = workerById(x.workerId);
-      return inMonth(x, m) && (!f.worker || x.workerId === f.worker) && (!f.type || x.type === f.type) &&
-        (!f.source || (w && w.source === f.source)) && matchQ(f.q, workerName(x.workerId), workerCode(x.workerId), x.details, x.notes);
-    }).sort(byDateDesc);
-    if (!rows.length) { sum.innerHTML = ''; box.innerHTML = noMatch('outsiderWork'); return; }
-    var g = group(rows, function (x) { return x.workerId; });
-    var srows = Array.from(g.entries()).map(function (en) {
-      var full = en[1].filter(function (x) { return x.type !== 'Half Day'; }).length, half = en[1].length - full;
-      return { id: en[0], full: full, half: half, days: sumLeave(en[1]) };
-    }).sort(function (a, b) { return workerName(a.id).localeCompare(workerName(b.id)); });
-    sum.innerHTML = cardOf('Worker-wise Work Summary', periodLabel(m), tbl(
-      ['Worker', 'Full Days', 'Half Days', 'Total Work Days'],
-      srows.map(function (s) { return [workerCell(s.id), fmtNum(s.full), fmtNum(s.half), '<strong>' + fmtNum(s.days) + '</strong>']; }),
-      ['Total', fmtNum(srows.reduce(function (a, s) { return a + s.full; }, 0)), fmtNum(srows.reduce(function (a, s) { return a + s.half; }, 0)), fmtNum(sumLeave(rows))]));
-    box.innerHTML = cardOf('Work Records', rows.length + ' record(s)', tbl(
-      ['Date', 'Worker', 'Source', 'Day Type', 'Days', 'Work / Site', 'Notes', 'Actions'],
-      rows.map(function (x) {
-        var w = workerById(x.workerId);
-        return [fmtDate(x.date), workerCell(x.workerId), w ? esc(w.source) : '—', leaveBadge(x.type), fmtNum(leaveDays(x)),
-          '<span class="wrap">' + dash(x.details) + '</span>', '<span class="wrap">' + dash(x.notes) + '</span>', actions('outsiderWork', x.id)];
-      })));
-  }
-
   function renderOutsiderOT() {
     var f = ui.f.outsiderOT, m = vm(f.month);
     var box = $('#outsiderOT-table'), sum = $('#outsiderOT-summary');
@@ -529,8 +496,7 @@
       return (!f.worker || w.id === f.worker) && (!f.source || w.source === f.source) && matchQ(f.q, w.workerId, w.name);
     }).map(function (w) {
       var ot = sumOT(db.outsideWorkerOT.filter(function (o) { return o.workerId === w.id && inMonth(o, m); }));
-      var days = sumLeave(db.outsideWorkerWork.filter(function (x) { return x.workerId === w.id && inMonth(x, m); }));
-      return { w: w, ot: ot, days: days, has: ot.total > 0 || days > 0 };
+      return { w: w, ot: ot, has: ot.total > 0 };
     }).filter(function (r) { return r.w.status === 'Active' || r.has || ui.f.reports.worker; }).sort(function (a, b) { return byName(a.w, b.w); });
   }
   function empTotals(rows) {
@@ -540,8 +506,8 @@
     return t;
   }
   function workerTotals(rows) {
-    var t = { days: 0, normal: 0, sunday: 0, other: 0, total: 0 };
-    rows.forEach(function (r) { t.days += r.days; t.normal += r.ot.normal; t.sunday += r.ot.sunday; t.other += r.ot.other; t.total += r.ot.total; });
+    var t = { normal: 0, sunday: 0, other: 0, total: 0 };
+    rows.forEach(function (r) { t.normal += r.ot.normal; t.sunday += r.ot.sunday; t.other += r.ot.other; t.total += r.ot.total; });
     Object.keys(t).forEach(function (k) { t[k] = r2(t[k]); });
     return t;
   }
@@ -571,9 +537,9 @@
     }
     if (db.outsideWorkers.length) {
       html += wr.length ? cardOf('Outside Worker Report', periodLabel(m), tbl(
-        ['Worker', 'Source', 'Work Days', Lb.normal, Lb.sunday].concat(wo ? ['Other OT'] : [], ['Total OT']),
-        wr.map(function (r) { return [workerCell(r.w.id), esc(r.w.source), fmtNum(r.days), fmtNum(r.ot.normal), fmtNum(r.ot.sunday)].concat(wo ? [fmtNum(r.ot.other)] : [], ['<strong>' + fmtNum(r.ot.total) + '</strong>']); }),
-        ['Total', '', fmtNum(wt.days), fmtNum(wt.normal), fmtNum(wt.sunday)].concat(wo ? [fmtNum(wt.other)] : [], [fmtNum(wt.total)])))
+        ['Worker', 'Source', Lb.normal, Lb.sunday].concat(wo ? ['Other OT'] : [], ['Total OT']),
+        wr.map(function (r) { return [workerCell(r.w.id), esc(r.w.source), fmtNum(r.ot.normal), fmtNum(r.ot.sunday)].concat(wo ? [fmtNum(r.ot.other)] : [], ['<strong>' + fmtNum(r.ot.total) + '</strong>']); }),
+        ['Total', '', fmtNum(wt.normal), fmtNum(wt.sunday)].concat(wo ? [fmtNum(wt.other)] : [], [fmtNum(wt.total)])))
         : cardOf('Outside Worker Report', periodLabel(m), '<div class="card-body">' + noMatch('reports') + '</div>');
     }
     // Detail when a single employee / worker is selected
@@ -590,17 +556,15 @@
     var selW = f.worker && workerById(f.worker);
     if (selW) {
       var WO = db.outsideWorkerOT.filter(function (o) { return o.workerId === selW.id && inMonth(o, m); }).sort(byDateDesc);
-      var WK = db.outsideWorkerWork.filter(function (x) { return x.workerId === selW.id && inMonth(x, m); }).sort(byDateDesc);
       html += cardOf('Worker Detail — ' + selW.name + ' (' + selW.workerId + ')', periodLabel(m),
-        '<div class="card-body"><h4>Work days</h4>' + (WK.length ? tbl(['Date', 'Day Type', 'Days', 'Work / Site'], WK.map(function (x) { return [fmtDate(x.date), leaveBadge(x.type), fmtNum(leaveDays(x)), dash(x.details)]; })) : '<p class="hint">No work entries.</p>') +
-        '<h4 style="margin-top:14px">Overtime</h4>' + (WO.length ? tbl(['Date', 'OT Type', 'Hours', 'Notes'], WO.map(function (o) { return [fmtDate(o.date), otBadge(o.type), fmtNum(o.hours), dash(o.notes)]; })) : '<p class="hint">No overtime.</p>') + '</div>');
+        '<div class="card-body">' + (WO.length ? tbl(['Date', 'OT Type', 'Hours', 'Notes'], WO.map(function (o) { return [fmtDate(o.date), otBadge(o.type), fmtNum(o.hours), dash(o.notes)]; })) : '<p class="hint">No overtime.</p>') + '</div>');
     }
     body.innerHTML = html;
   }
 
   /* ----- Backup view ----- */
   function renderBackup() {
-    var labels = { employees: 'Employees', leaves: 'Leave records', employeeOT: 'Employee OT', advances: 'Advances', outsideWorkers: 'Outside workers', outsideWorkerWork: 'Outside worker work days', outsideWorkerOT: 'Outside worker OT' };
+    var labels = { employees: 'Employees', leaves: 'Leave records', employeeOT: 'Employee OT', advances: 'Advances', outsideWorkers: 'Outside workers', outsideWorkerOT: 'Outside worker OT' };
     var html = '<div class="count-grid">' + DATA_KEYS.map(function (k) {
       return '<div class="count"><strong>' + db[k].length + '</strong><span>' + labels[k] + '</span></div>';
     }).join('') + '</div>';
@@ -613,7 +577,7 @@
 
   var RENDER = {
     dashboard: renderDashboard, employees: renderEmployees, leaves: renderLeaves, ot: renderOT, advances: renderAdvances,
-    outsiders: renderOutsiders, outsiderWork: renderOutsiderWork, outsiderOT: renderOutsiderOT, reports: renderReports, backup: renderBackup
+    outsiders: renderOutsiders, outsiderOT: renderOutsiderOT, reports: renderReports, backup: renderBackup
   };
   function renderView(v) { if (RENDER[v]) RENDER[v](); }
   function renderCurrent() { renderView(ui.view); }
@@ -779,47 +743,6 @@
       },
       describe: function (r) { return r.name + ' (' + r.workerId + ')'; }
     },
-    outsiderWork: {
-      title: 'Work Entry', coll: 'outsideWorkerWork', needs: NEED_WORKER,
-      fields: function (rec) {
-        var f = [{ name: 'workerId', label: 'Worker', type: 'select', required: true, placeholder: 'Select worker', options: workerOptions(rec && rec.workerId), wide: true }];
-        if (!rec) f.push({ name: 'mode', label: 'Work Days', type: 'select', required: true, wide: true, options: [['single', 'Single day'], ['range', 'Multiple days (continuous work)']] });
-        f.push({ name: 'date', label: 'Date', type: 'date', required: true });
-        if (!rec) f.push({ name: 'dateTo', label: 'To Date', type: 'date', hidden: true });
-        f.push(
-          { name: 'type', label: 'Day Type', type: 'select', required: true, options: LEAVE_BUILTIN.slice() },
-          { name: 'details', label: 'Work / Site Details', type: 'text', maxlength: 150, wide: true, fallback: '-', hint: 'Optional — saved as "-" if left empty' },
-          { name: 'notes', label: 'Notes', type: 'textarea', wide: true }
-        );
-        return f;
-      },
-      defaults: function () { return { mode: 'single', date: todayStr(), type: 'Full Day' }; },
-      validate: function (v, rec) {
-        if (v.mode === 'range') {
-          if (!isDate(v.dateTo)) return { msg: 'Enter a valid To Date.', field: 'dateTo' };
-          if (v.dateTo < v.date) return { msg: 'To Date cannot be before the From Date.', field: 'dateTo' };
-          if (datesBetween(v.date, v.dateTo).length > 62) return { msg: 'A range can be at most 62 days.', field: 'dateTo' };
-          return null;
-        }
-        var dup = db.outsideWorkerWork.find(function (x) { return x.workerId === v.workerId && x.date === v.date && (!rec || x.id !== rec.id); });
-        if (dup) return { msg: 'This worker already has a work entry on that date. Edit the existing entry instead.', field: 'date' };
-        return null;
-      },
-      normalize: function (v) { var o = Object.assign({}, v); delete o.mode; delete o.dateTo; return o; },
-      customSave: function (v) {
-        if (v.mode !== 'range') return null;
-        var have = {}, added = 0, skipped = 0, now = new Date().toISOString();
-        db.outsideWorkerWork.forEach(function (x) { if (x.workerId === v.workerId) have[x.date] = 1; });
-        datesBetween(v.date, v.dateTo).forEach(function (d) {
-          if (have[d]) { skipped++; return; }
-          db.outsideWorkerWork.push({ id: uid(), createdAt: now, workerId: v.workerId, date: d, type: v.type, details: v.details, notes: v.notes });
-          added++;
-        });
-        if (!added) return { err: 'Every date in that range already has a work entry for this worker.' };
-        return { msg: added + ' work day(s) added' + (skipped ? ' (' + skipped + ' already existed and were skipped)' : '') + '.' };
-      },
-      describe: function (r) { return 'work of ' + workerName(r.workerId) + ' on ' + r.date; }
-    },
     outsiderOT: {
       title: 'Outside Worker OT', coll: 'outsideWorkerOT', needs: NEED_WORKER,
       fields: function (rec) {
@@ -942,37 +865,24 @@
     toast('Option names updated.');
   }
 
-  function openForm(kind, id, dup) {
+  function openForm(kind, id) {
     var cfg = FORMS[kind]; if (!cfg) return;
-    var src = id ? db[cfg.coll].find(function (r) { return r.id === id; }) : null;
-    if (id && !src) { toast('That record no longer exists.', 'error'); return; }
-    var rec = dup ? null : src;
+    var rec = id ? db[cfg.coll].find(function (r) { return r.id === id; }) : null;
+    if (id && !rec) { toast('That record no longer exists.', 'error'); return; }
     if (!rec && cfg.needs) {
       var p = cfg.needs();
       if (p) { toast(p.msg, 'error'); location.hash = '#' + p.view; return; }
     }
-    var vals;
-    if (dup) {
-      vals = Object.assign({}, src);
-      delete vals.id; delete vals.createdAt; delete vals.updatedAt;
-      if (kind === 'employees') vals.empId = '';
-      if (kind === 'outsiders') vals.workerId = '';
-      vals.mode = 'single';
-    } else {
-      vals = rec || (cfg.defaults ? cfg.defaults() : {});
-    }
+    var vals = rec || (cfg.defaults ? cfg.defaults() : {});
     var fields = cfg.fields(rec);
-    var heading = (dup ? 'Duplicate ' : rec ? 'Edit ' : 'Add ') + cfg.title;
     openModal(
-      '<form id="rec-form" novalidate data-kind="' + kind + '" data-id="' + esc(rec ? id : '') + '">' +
-      '<div class="modal-head"><h3>' + esc(heading) + '</h3><button type="button" class="icon-x" data-action="close-modal" aria-label="Close">&times;</button></div>' +
-      '<div class="modal-body">' + (dup ? '<p class="note" style="margin-bottom:14px">Copied from an existing entry. Change what you need, then save.</p>' : '') +
-      '<div class="form-grid">' + fields.map(function (f) { return fieldHtml(f, vals[f.name]); }).join('') + '</div>' +
+      '<form id="rec-form" novalidate data-kind="' + kind + '" data-id="' + esc(id || '') + '">' +
+      '<div class="modal-head"><h3>' + (rec ? 'Edit ' : 'Add ') + esc(cfg.title) + '</h3><button type="button" class="icon-x" data-action="close-modal" aria-label="Close">&times;</button></div>' +
+      '<div class="modal-body"><div class="form-grid">' + fields.map(function (f) { return fieldHtml(f, vals[f.name]); }).join('') + '</div>' +
       '<p class="hint"><b style="color:var(--red)">*</b> Required</p></div>' +
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button type="submit" class="btn btn-primary">' + (rec ? 'Save Changes' : 'Save') + '</button></div></form>',
-      { label: heading }
+      { label: (rec ? 'Edit ' : 'Add ') + cfg.title }
     );
-    if (dup && vals.mode === 'single') { /* single date by default */ }
   }
 
   function submitForm(form) {
@@ -1030,8 +940,8 @@
       msg = 'Delete employee <strong>' + esc(cfg.describe(rec)) + '</strong>?' + (cascade ? ' Their <strong>' + cascade + '</strong> leave, OT and advance record(s) will also be deleted.' : '') +
         ' This cannot be undone.<br><br><span class="hint">Tip: set the status to Inactive instead to keep their history.</span>';
     } else if (kind === 'outsiders') {
-      cascade = db.outsideWorkerOT.filter(function (x) { return x.workerId === id; }).length + db.outsideWorkerWork.filter(function (x) { return x.workerId === id; }).length;
-      msg = 'Delete outside worker <strong>' + esc(cfg.describe(rec)) + '</strong>?' + (cascade ? ' Their <strong>' + cascade + '</strong> work and OT record(s) will also be deleted.' : '') +
+      cascade = db.outsideWorkerOT.filter(function (x) { return x.workerId === id; }).length;
+      msg = 'Delete outside worker <strong>' + esc(cfg.describe(rec)) + '</strong>?' + (cascade ? ' Their <strong>' + cascade + '</strong> OT record(s) will also be deleted.' : '') +
         ' This cannot be undone.<br><br><span class="hint">Tip: set the status to Inactive instead to keep their history.</span>';
     }
     var ok = await confirmBox({ title: 'Confirm delete', message: msg, okText: 'Delete', danger: true });
@@ -1045,8 +955,7 @@
       save('leaves'); save('employeeOT'); save('advances');
     } else if (kind === 'outsiders') {
       db.outsideWorkerOT = db.outsideWorkerOT.filter(function (x) { return x.workerId !== id; });
-      db.outsideWorkerWork = db.outsideWorkerWork.filter(function (x) { return x.workerId !== id; });
-      save('outsideWorkerOT'); save('outsideWorkerWork');
+      save('outsideWorkerOT');
     }
     populateSelects(); renderCurrent();
     toast(cfg.title + ' deleted.');
@@ -1092,7 +1001,7 @@
 
   function cleanList(key, list) {
     var out = [], skipped = 0;
-    var dated = ['leaves', 'employeeOT', 'advances', 'outsideWorkerWork', 'outsideWorkerOT'];
+    var dated = ['leaves', 'employeeOT', 'advances', 'outsideWorkerOT'];
     list.forEach(function (r) {
       if (!r || typeof r !== 'object' || Array.isArray(r)) { skipped++; return; }
       var x = Object.assign({}, r);
@@ -1108,7 +1017,7 @@
         if (!isFinite(a) || a < 0) { skipped++; return; }
         x.amount = r2(a);
       }
-      if (key === 'leaves' || key === 'outsideWorkerWork') x.type = x.type === 'Half Day' ? 'Half Day' : 'Full Day';
+      if (key === 'leaves') x.type = x.type === 'Half Day' ? 'Half Day' : 'Full Day';
       out.push(x);
     });
     return { out: out, skipped: skipped };
@@ -1198,9 +1107,9 @@
       var wt = workerTotals(wrows);
       var wo = otherOn('workerOtTypes', wt);
       lines = [[COMPANY], ['Outside Worker Monthly Report'], ['Month', periodLabel(m)], ['Generated', todayStr()], [],
-        ['Worker ID', 'Worker', 'Source', 'Work Days', Lb.normal, Lb.sunday].concat(wo ? ['Other OT'] : [], ['Total OT'])]
-        .concat(wrows.map(function (r) { return [r.w.workerId, r.w.name, r.w.source, r.days, r.ot.normal, r.ot.sunday].concat(wo ? [r.ot.other] : [], [r.ot.total]); }))
-        .concat([['TOTAL', '', '', wt.days, wt.normal, wt.sunday].concat(wo ? [wt.other] : [], [wt.total])]);
+        ['Worker ID', 'Worker', 'Source', Lb.normal, Lb.sunday].concat(wo ? ['Other OT'] : [], ['Total OT'])]
+        .concat(wrows.map(function (r) { return [r.w.workerId, r.w.name, r.w.source, r.ot.normal, r.ot.sunday].concat(wo ? [r.ot.other] : [], [r.ot.total]); }))
+        .concat([['TOTAL', '', '', wt.normal, wt.sunday].concat(wo ? [wt.other] : [], [wt.total])]);
       name = 'ameer-fire-safety-outside-worker-report-' + (m || 'all-months') + '.csv';
     }
     download(name, '\ufeff' + lines.map(csvLine).join('\r\n'), 'text/csv;charset=utf-8');
@@ -1238,7 +1147,6 @@
     switch (a) {
       case 'add': openForm(el.dataset.kind); break;
       case 'edit': openForm(el.dataset.kind, el.dataset.id); break;
-      case 'duplicate': openForm(el.dataset.kind, el.dataset.id, true); break;
       case 'delete': deleteRecord(el.dataset.kind, el.dataset.id); break;
       case 'clear-filters': clearFilters(el.dataset.view); break;
       case 'all-months': ui.f[el.dataset.view].month = ''; syncFilterInputs(el.dataset.view); renderView(el.dataset.view); break;
