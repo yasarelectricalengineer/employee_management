@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ameer Fire and Safety — Employee, Leave, OT &amp; Advance Management</title>
+<meta name="app-version" content="20261026b">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta name="theme-color" content="#D62828">
+<meta name="description" content="Employee, leave, overtime and advance management for Ameer Fire and Safety. Runs fully in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z' fill='%23D62828'/%3E%3Cpath d='M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z' fill='%23FFB703'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css?v=20261026b">
+</head>
+<body class="locked">
+<noscript><div class="banner">This app needs JavaScript enabled to work.</div></noscript>
+
+<div class="app">
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="brand"><span class="brand-logo" id="brand-logo"><svg viewBox="0 0 32 32" width="38" height="38" aria-hidden="true">
+        <path d="M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z" fill="#D62828"/>
+        <path d="M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z" fill="#FFB703"/>
+      </svg></span>
+      <div class="brand-text">
+        <strong id="brand-name">Ameer Fire and Safety</strong>
+        <span data-lbl="tagline">Staff · Leave · OT · Advance</span>
+      </div>
+    </div>
+    <nav id="nav">
+      <a href="#dashboard" data-view="dashboard"><span class="ico" data-ico="dashboard"></span><span class="nl" data-lbl="dashboard">Dashboard</span></a>
+      <a href="#employees" data-view="employees"><span class="ico" data-ico="users"></span><span class="nl" data-lbl="employees">Employees</span></a>
+      <a href="#leaves" data-view="leaves"><span class="ico" data-ico="calendar"></span><span class="nl" data-lbl="leaves">Leave</span></a>
+      <a href="#ot" data-view="ot"><span class="ico" data-ico="clock"></span><span class="nl" data-lbl="ot">Employee OT</span></a>
+      <a href="#advances" data-view="advances"><span class="ico" data-ico="coin"></span><span class="nl" data-lbl="advances">Advance</span></a>
+      <a href="#holidays" data-view="holidays"><span class="ico" data-ico="calendar"></span><span class="nl" data-lbl="holidays">Holidays</span></a>
+      <div class="nav-sep" data-lbl="sepOutside">Outside Workers</div>
+      <a href="#outsiders" data-view="outsiders"><span class="ico" data-ico="hardhat"></span><span class="nl" data-lbl="outsiders">Outside Workers</span></a>
+      <a href="#outsiderWork" data-view="outsiderWork"><span class="ico" data-ico="calendar"></span><span class="nl" data-lbl="outsiderWork">Outside Worker Work</span></a>
+      <a href="#outsiderLeave" data-view="outsiderLeave"><span class="ico" data-ico="calendar"></span><span class="nl" data-lbl="outsiderLeave">Outside Worker Leave</span></a>
+      <a href="#outsiderOT" data-view="outsiderOT"><span class="ico" data-ico="clock"></span><span class="nl" data-lbl="outsiderOT">Outside Worker OT</span></a>
+      <div class="nav-sep" data-lbl="sepOutput">Output</div>
+      <a href="#reports" data-view="reports"><span class="ico" data-ico="report"></span><span class="nl" data-lbl="reports">Monthly Reports</span></a>
+      <a href="#activity" data-view="activity"><span class="ico" data-ico="clock"></span><span class="nl" data-lbl="activity">Activity Log</span></a>
+      <a href="#backup" data-view="backup"><span class="ico" data-ico="database"></span><span class="nl" data-lbl="backup">Backup &amp; Drive</span></a>
+    </nav>
+    <div class="side-foot">Data is saved only in this browser. Export a backup regularly.</div>
+  </aside>
+  <div class="scrim" id="scrim" data-action="toggle-menu"></div>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" data-action="toggle-menu" aria-label="Open menu"><span class="ico" data-ico="menu"></span></button>
+      <h1 class="top-title" id="top-title">Dashboard</h1>
+      <div class="top-actions"><button class="btn btn-sm" data-action="export-json">Download Backup</button><button class="btn btn-sm" data-action="logout">Logout</button></div>
+    </header>
+
+    <div id="storage-warning" class="banner hidden">
+      Browser storage is unavailable or blocked (private mode?). Data will <strong>not</strong> be saved after you close this page. Download a backup before leaving.
+    </div>
+
+    <main class="content">
+
+      <!-- Dashboard -->
+      <section class="view" id="view-dashboard">
+        <div class="view-head">
+          <div><h2>Dashboard</h2><p>Overview of staff, leave, overtime and advances.</p></div>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="dashboard.month"></label>
+          <button class="btn" data-action="all-months" data-view="dashboard">All Months</button>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="dashboard">Clear Filters</button>
+        </div>
+        <div id="dashboard-body"></div>
+      </section>
+
+      <!-- Employees -->
+      <section class="view" id="view-employees">
+        <div class="view-head">
+          <div><h2>Employees</h2><p id="employees-count">Manage your staff records.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="employees">+ Add Employee</button>
+        </div>
+        <div class="filters card">
+          <label class="grow">Search<input type="search" data-f="employees.q" placeholder="ID, name, phone, designation…"></label>
+          <label>Status<select data-f="employees.status"><option value="">All</option><option>Active</option><option>Inactive</option></select></label>
+          <label>Department<select data-f="employees.dept" data-src="departments" data-all="All departments"></select></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="employees">Clear Filters</button>
+        </div>
+        <div id="employees-table"></div>
+      </section>
+
+      <!-- Leave -->
+      <section class="view" id="view-leaves">
+        <div class="view-head">
+          <div><h2>Leave Management</h2><p>Full day = 1 day, half day = 0.5 day.</p></div>
+          <button class="btn btn-primary" id="leave-add-btn" data-action="add" data-kind="leaves">+ Add Leave</button>
+        </div>
+        <div class="who-switch card" role="radiogroup" aria-label="Leave for">
+          <label class="radio"><input type="radio" name="leaveWho" value="emp" checked><span id="who-emp-label" data-lbl="whoEmp">Company Employee</span></label>
+          <label class="radio"><input type="radio" name="leaveWho" value="out"><span id="who-out-label" data-lbl="whoOut">Outside Employee</span></label>
+        </div>
+        <div id="leave-emp-pane">
+        <div class="filters card">
+          <label>Month<input type="month" data-f="leaves.month"></label>
+          <label>Employee<select data-f="leaves.emp" data-src="employees" data-all="All employees"></select></label>
+          <label>Leave Type<select data-f="leaves.type" data-src="leaveTypes" data-all="All types"></select></label>
+          <label class="grow">Search<input type="search" data-f="leaves.q" placeholder="Name, reason, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="leaves">Clear Filters</button>
+        </div>
+        <div id="leaves-summary"></div>
+        <div id="leaves-table"></div>
+        </div>
+        <div id="leave-out-pane" class="hidden">
+        <div class="filters card">
+          <label>Month<input type="month" data-f="leavesOut.month"></label>
+          <label>Worker<select data-f="leavesOut.worker" data-src="workers" data-all="All workers"></select></label>
+          <label>Leave Type<select data-f="leavesOut.type"><option value="">All</option><option>Full Day</option><option>Half Day</option></select></label>
+          <label>Worker Source<select data-f="leavesOut.source" data-src="sources" data-all="All sources"></select></label>
+          <label class="grow">Search<input type="search" data-f="leavesOut.q" placeholder="Worker, reason, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="leavesOut">Clear Filters</button>
+        </div>
+        <div id="leavesOut-summary"></div>
+        <div id="leavesOut-table"></div>
+        </div>
+      </section>
+
+      <!-- Employee OT -->
+      <section class="view" id="view-ot">
+        <div class="view-head">
+          <div><h2>Employee OT</h2><p>Overtime hours — decimals like 1.5, 2.5 or 3.75 are supported. OT on a holiday is counted and marked "Holiday".</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="ot">+ Add OT</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="ot.month"></label>
+          <label>Employee<select data-f="ot.emp" data-src="employees" data-all="All employees"></select></label>
+          <label>OT Type<select data-f="ot.type" data-src="otTypes" data-all="All types"></select></label>
+          <label class="grow">Search<input type="search" data-f="ot.q" placeholder="Name, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="ot">Clear Filters</button>
+        </div>
+        <div id="ot-summary"></div>
+        <div id="ot-table"></div>
+      </section>
+
+      <!-- Advances -->
+      <section class="view" id="view-advances">
+        <div class="view-head">
+          <div><h2>Advances</h2><p>Monthly and employee-wise totals are calculated automatically.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="advances">+ Add Advance</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="advances.month"></label>
+          <label>Employee<select data-f="advances.emp" data-src="employees" data-all="All employees"></select></label>
+          <label class="grow">Search<input type="search" data-f="advances.q" placeholder="Name, reason, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="advances">Clear Filters</button>
+        </div>
+        <div id="advances-summary"></div>
+        <div id="advances-table"></div>
+      </section>
+
+      <!-- Holidays -->
+      <section class="view" id="view-holidays">
+        <div class="view-head">
+          <div><h2>Holidays</h2><p>Set weekly holidays and special holiday dates. Work and leave are not counted on holidays. OT is counted and marked as Holiday.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="holidays">+ Add Holiday</button>
+        </div>
+        <div id="holidays-weekly"></div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="holidays.month"></label>
+          <label class="grow">Search<input type="search" data-f="holidays.q" placeholder="Holiday name, notes…"></label>
+          <button class="btn" data-action="all-months" data-view="holidays">All Months</button>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="holidays">Clear Filters</button>
+        </div>
+        <div id="holidays-preview"></div>
+        <div id="holidays-table"></div>
+      </section>
+
+      <!-- Outside Workers -->
+      <section class="view" id="view-outsiders">
+        <div class="view-head">
+          <div><h2>Outside Workers</h2><p>Kept completely separate from company employees.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="outsiders">+ Add Worker</button>
+        </div>
+        <div class="filters card">
+          <label class="grow">Search<input type="search" data-f="outsiders.q" placeholder="Worker ID, name, phone…"></label>
+          <label>Worker Source<select data-f="outsiders.source" data-src="sources" data-all="All sources"></select></label>
+          <label>Status<select data-f="outsiders.status"><option value="">All</option><option>Active</option><option>Inactive</option></select></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiders">Clear Filters</button>
+        </div>
+        <div id="outsiders-table"></div>
+      </section>
+
+      <!-- Outside Worker Work -->
+      <section class="view" id="view-outsiderWork">
+        <div class="view-head">
+          <div><h2>Outside Worker Work</h2><p>Record the days outside workers worked — one day at a time, or many days at once. Full day = 1, half day = 0.5.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="outsiderWork">+ Add Work</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="outsiderWork.month"></label>
+          <label>Worker<select data-f="outsiderWork.worker" data-src="workers" data-all="All workers"></select></label>
+          <label>Day Type<select data-f="outsiderWork.type"><option value="">All</option><option>Full Day</option><option>Half Day</option></select></label>
+          <label>Worker Source<select data-f="outsiderWork.source" data-src="sources" data-all="All sources"></select></label>
+          <label class="grow">Search<input type="search" data-f="outsiderWork.q" placeholder="Worker, work / site, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiderWork">Clear Filters</button>
+        </div>
+        <div id="outsiderWork-summary"></div>
+        <div id="outsiderWork-table"></div>
+      </section>
+
+      <!-- Outside Worker Leave (same data as the Outside Employee tab on the Leave page) -->
+      <section class="view" id="view-outsiderLeave">
+        <div class="view-head">
+          <div><h2>Outside Worker Leave</h2><p>Leave of outside workers — the same records also appear on the Leave page. A worker cannot have work and leave on the same day.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="outsiderLeave">+ Add Outside Leave</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="outsiderLeave.month"></label>
+          <label>Worker<select data-f="outsiderLeave.worker" data-src="workers" data-all="All workers"></select></label>
+          <label>Leave Type<select data-f="outsiderLeave.type"><option value="">All</option><option>Full Day</option><option>Half Day</option></select></label>
+          <label>Worker Source<select data-f="outsiderLeave.source" data-src="sources" data-all="All sources"></select></label>
+          <label class="grow">Search<input type="search" data-f="outsiderLeave.q" placeholder="Worker, reason, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiderLeave">Clear Filters</button>
+        </div>
+        <div id="outsiderLeave-summary"></div>
+        <div id="outsiderLeave-table"></div>
+      </section>
+
+      <!-- Outside Worker OT -->
+      <section class="view" id="view-outsiderOT">
+        <div class="view-head">
+          <div><h2>Outside Worker OT</h2><p>Separate overtime records for outside workers.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="outsiderOT">+ Add Worker OT</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="outsiderOT.month"></label>
+          <label>Worker<select data-f="outsiderOT.worker" data-src="workers" data-all="All workers"></select></label>
+          <label>OT Type<select data-f="outsiderOT.type" data-src="workerOtTypes" data-all="All types"></select></label>
+          <label>Worker Source<select data-f="outsiderOT.source" data-src="sources" data-all="All sources"></select></label>
+          <label class="grow">Search<input type="search" data-f="outsiderOT.q" placeholder="Name, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiderOT">Clear Filters</button>
+        </div>
+        <div id="outsiderOT-summary"></div>
+        <div id="outsiderOT-table"></div>
+      </section>
+
+      <!-- Activity (read-only, automatic) -->
+      <section class="view" id="view-activity">
+        <div class="view-head">
+          <div><h2>Activity &amp; Last Updated</h2><p>Recorded automatically. This page is read-only and cannot be edited.</p></div>
+        </div>
+        <div id="activity-body"></div>
+      </section>
+
+      <!-- Reports -->
+      <section class="view" id="view-reports">
+        <div class="view-head no-print">
+          <div><h2>Monthly Reports</h2><p>Employee-wise and outside-worker reports. Print or export to CSV.</p></div>
+          <div class="head-actions">
+            <button class="btn btn-primary" data-action="print-report">Print Report</button>
+            <button class="btn" data-action="csv-emp">Employee CSV</button>
+            <button class="btn" data-action="csv-out">Outside Worker CSV</button>
+          </div>
+        </div>
+        <div class="filters card no-print">
+          <label>Month<input type="month" data-f="reports.month"></label>
+          <label>Employee<select data-f="reports.emp" data-src="employees" data-all="All employees"></select></label>
+          <label>Worker<select data-f="reports.worker" data-src="workers" data-all="All workers"></select></label>
+          <label>Worker Source<select data-f="reports.source" data-src="sources" data-all="All sources"></select></label>
+          <label class="grow">Search<input type="search" data-f="reports.q" placeholder="Name or ID…"></label>
+          <button class="btn" data-action="all-months" data-view="reports">All Months</button>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="reports">Clear Filters</button>
+        </div>
+        <div id="reports-body"></div>
+      </section>
+
+      <!-- Backup -->
+      <section class="view" id="view-backup">
+        <div class="view-head">
+          <div><h2>Backup &amp; Google Drive</h2><p>Your data lives only in this browser. Back it up regularly.</p></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Backup / Restore</h3></div>
+          <div class="card-body">
+            <div id="backup-summary"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" data-action="export-json">Export JSON Backup</button>
+              <button class="btn" data-action="import-json">Import JSON Backup</button>
+            </div>
+            <p class="hint">Export downloads <code>ameer-fire-safety-backup-YYYY-MM-DD.json</code>. Import replaces all data in this browser with the contents of the file.</p>
+          </div>
+        </div>
+
+        <div class="card" id="security-card">
+          <div class="card-head"><h3>Login &amp; Security</h3></div>
+          <div class="card-body">
+            <p class="note">The login username is fixed. Change the password here (current password needed). If you forget it, use <strong>Forgot password?</strong> on the login screen — it asks the developer security questions.</p>
+            <div class="form-grid">
+              <label class="fld"><span class="lbl">Username</span><input type="text" id="sec-user" readonly autocomplete="off"></label>
+              <label class="fld"><span class="lbl">Current password *</span><input type="password" id="sec-cur" maxlength="100" autocomplete="current-password"></label>
+              <label class="fld"><span class="lbl">New password *</span><input type="password" id="sec-new" maxlength="100" autocomplete="new-password"></label>
+              <label class="fld"><span class="lbl">Confirm new password</span><input type="password" id="sec-new2" maxlength="100" autocomplete="new-password"></label>
+            </div>
+            <div class="btn-row"><button class="btn btn-accent" data-action="save-auth">Change password</button><button class="btn" data-action="logout">Logout</button></div>
+            <p class="hint">This is a screen lock for a frontend-only app: it keeps casual users out but is not bank-grade security. The login is stored only in this browser and is not part of the JSON backup.</p>
+          </div>
+        </div>
+
+        <div class="card" id="drive-card">
+          <div class="card-head"><h3>Google Drive</h3></div>
+          <div class="card-body">
+            <p class="note"><strong>Manual process.</strong> This app does not connect to Google Drive and cannot upload or read files automatically. The buttons below download the backup and open your Drive folder so you can upload or download the file yourself.</p>
+            <div class="btn-row">
+              <button class="btn btn-accent" data-action="export-drive">Export to Drive</button>
+              <button class="btn" data-action="import-drive">Import From Drive</button>
+              <a class="btn btn-ghost" id="drive-open" href="https://drive.google.com/drive/folders/12FOBPx6i20ETWm7WgNl1muJILucahRjl?usp=drive_link" target="_blank" rel="noopener noreferrer">Open Drive folder</a>
+            </div>
+            <div class="drive-link">
+              <label for="drive-input"><strong>Drive folder link</strong> <span class="hint">(change anytime)</span></label>
+              <div class="addrow">
+                <input type="url" id="drive-input" placeholder="https://drive.google.com/drive/folders/..." autocomplete="off">
+                <button type="button" class="btn btn-sm btn-accent" data-action="save-drive">Save link</button>
+                <button type="button" class="btn btn-sm" data-action="reset-drive">Reset to default</button>
+              </div>
+            </div>
+            <div class="steps" id="drive-steps">
+              <div>
+                <h4>Export to Drive</h4>
+                <ol>
+                  <li>Click <strong>Export to Drive</strong>. The JSON backup downloads automatically.</li>
+                  <li>The Drive folder opens in a new tab.</li>
+                  <li>Drag the downloaded file into that folder.</li>
+                </ol>
+              </div>
+              <div>
+                <h4>Import From Drive</h4>
+                <ol>
+                  <li>Click <strong>Import From Drive</strong>. The Drive folder opens in a new tab.</li>
+                  <li>Download the backup JSON you want to restore.</li>
+                  <li>Come back here and select that file:</li>
+                </ol>
+                <button class="btn btn-primary btn-sm" data-action="import-json">Select downloaded JSON file</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="menulabels-card">
+          <div class="card-head"><h3>Menu &amp; label names</h3></div>
+          <div class="card-body">
+            <p class="note">Rename any menu or label. Only the names change — icons stay the same. Leave a box empty to use the default name.</p>
+            <div class="form-grid" id="menulabels-grid"></div>
+            <div class="btn-row"><button class="btn btn-accent" data-action="save-menu">Save names</button><button class="btn" data-action="reset-menu">Reset to defaults</button></div>
+          </div>
+        </div>
+
+        <div class="card" id="company-card">
+          <div class="card-head"><h3>Company name &amp; logo</h3></div>
+          <div class="card-body">
+            <div class="company-edit">
+              <div class="logo-preview" id="logo-preview"></div>
+              <div class="company-fields">
+                <label class="fld"><span class="lbl">Company name</span>
+                  <span class="addrow"><input type="text" id="company-name" maxlength="60" autocomplete="off"><button type="button" class="btn btn-sm btn-accent" data-action="save-company">Save name</button></span></label>
+                <div class="btn-row">
+                  <button type="button" class="btn btn-sm" data-action="pick-logo">Upload logo</button>
+                  <button type="button" class="btn btn-sm" data-action="reset-logo">Remove logo</button>
+                </div>
+                <input type="file" id="logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" hidden>
+              </div>
+            </div>
+            <p class="hint">Shown in the sidebar, login screen, printed reports, CSV and browser tab. Logo is resized automatically and saved in this browser (and in JSON backups).</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Settings</h3></div>
+          <div class="card-body">
+            <label class="inline-field">Currency label for advances
+              <input id="currency-input" type="text" maxlength="6" placeholder="AED">
+            </label>
+            <p class="hint">Shown next to advance amounts. Saved automatically.</p>
+          </div>
+        </div>
+
+        <div class="card danger-zone">
+          <div class="card-head"><h3>Danger zone</h3></div>
+          <div class="card-body">
+            <p class="hint">Permanently deletes every employee, leave, OT, advance and outside worker record from this browser. Export a backup first.</p>
+            <button class="btn btn-danger" data-action="clear-all">Delete All Data</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div id="auth-gate" class="auth-gate">
+  <form id="auth-form" class="auth-card" autocomplete="on" novalidate>
+    <div class="auth-brand"><span class="brand-logo" id="gate-logo"><svg viewBox="0 0 32 32" width="44" height="44" aria-hidden="true"><path d="M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z" fill="#D62828"/><path d="M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z" fill="#FFB703"/></svg></span><strong id="gate-name">Ameer Fire and Safety</strong>
+    </div>
+    <h2 id="auth-title">Sign in</h2>
+    <p id="auth-sub" class="hint"></p>
+    <label class="fld"><span class="lbl">Username</span><input type="text" name="user" autocomplete="username" maxlength="40"></label>
+    <label class="fld"><span class="lbl">Password</span><input type="password" name="pass" autocomplete="current-password" maxlength="100"></label>
+    <label class="auth-remember"><input type="checkbox" name="remember"> Keep me signed in on this device</label>
+    <p id="auth-err" class="auth-err" role="alert"></p>
+    <button type="submit" id="auth-submit" class="btn btn-primary btn-block">Sign in</button>
+    <button type="button" id="auth-forgot" class="link-btn" data-action="auth-forgot">Forgot password?</button>
+    <div id="auth-reset-box" class="auth-reset hidden">
+      <div id="rs-step1">
+        <p class="hint"><strong>Reset password</strong> — answer the developer security questions. Your data is not erased.</p>
+        <label class="fld"><span class="lbl">Developer name</span><input type="text" id="rs-name" autocomplete="off" maxlength="80"></label>
+        <label class="fld"><span class="lbl">Developer email ID</span><input type="text" id="rs-email" autocomplete="off" maxlength="80"></label>
+        <label class="fld"><span class="lbl">Developer phone number</span><input type="text" id="rs-phone" autocomplete="off" maxlength="25" inputmode="tel"></label>
+        <label class="fld"><span class="lbl">Developer Emirates ID no.</span><input type="text" id="rs-eid" autocomplete="off" maxlength="25" inputmode="numeric"></label>
+        <button type="button" id="rs-verify" class="btn btn-accent btn-block" data-action="auth-verify">Verify answers</button>
+      </div>
+      <div id="rs-step2" class="hidden">
+        <p class="hint"><strong>Answers verified.</strong> Choose a new password (min 6 characters).</p>
+        <label class="fld"><span class="lbl">New password</span><input type="password" id="rs-new" autocomplete="new-password" maxlength="100"></label>
+        <label class="fld"><span class="lbl">Confirm new password</span><input type="password" id="rs-new2" autocomplete="new-password" maxlength="100"></label>
+        <button type="button" class="btn btn-accent btn-block" data-action="auth-setpw">Save new password</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div id="modal-root" aria-live="polite"></div>
+<div id="toasts" aria-live="polite"></div>
+<input type="file" id="import-file" accept=".json,application/json" hidden>
+
+<script src="app.js?v=20261026b"></script>
+</body>
+</html>
