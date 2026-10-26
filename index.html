@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ameer Fire and Safety — Employee, Leave, OT &amp; Advance Management</title>
-<meta name="app-version" content="20261026b">
+<meta name="app-version" content="20261026c">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="theme-color" content="#D62828">
 <meta name="description" content="Employee, leave, overtime and advance management for Ameer Fire and Safety. Runs fully in your browser.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z' fill='%23D62828'/%3E%3Cpath d='M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z' fill='%23FFB703'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=20261026b">
+<link rel="stylesheet" href="style.css?v=20261026c">
 </head>
-<body class="locked">
+<body>
 <noscript><div class="banner">This app needs JavaScript enabled to work.</div></noscript>
 
 <div class="app">
@@ -52,7 +52,7 @@
     <header class="topbar">
       <button class="menu-btn" data-action="toggle-menu" aria-label="Open menu"><span class="ico" data-ico="menu"></span></button>
       <h1 class="top-title" id="top-title">Dashboard</h1>
-      <div class="top-actions"><button class="btn btn-sm" data-action="export-json">Download Backup</button><button class="btn btn-sm" data-action="logout">Logout</button></div>
+      <div class="top-actions"><button class="btn btn-sm" data-action="export-json">Download Backup</button></div>
     </header>
 
     <div id="storage-warning" class="banner hidden">
@@ -291,21 +291,6 @@
           </div>
         </div>
 
-        <div class="card" id="security-card">
-          <div class="card-head"><h3>Login &amp; Security</h3></div>
-          <div class="card-body">
-            <p class="note">The login username is fixed. Change the password here (current password needed). If you forget it, use <strong>Forgot password?</strong> on the login screen — it asks the developer security questions.</p>
-            <div class="form-grid">
-              <label class="fld"><span class="lbl">Username</span><input type="text" id="sec-user" readonly autocomplete="off"></label>
-              <label class="fld"><span class="lbl">Current password *</span><input type="password" id="sec-cur" maxlength="100" autocomplete="current-password"></label>
-              <label class="fld"><span class="lbl">New password *</span><input type="password" id="sec-new" maxlength="100" autocomplete="new-password"></label>
-              <label class="fld"><span class="lbl">Confirm new password</span><input type="password" id="sec-new2" maxlength="100" autocomplete="new-password"></label>
-            </div>
-            <div class="btn-row"><button class="btn btn-accent" data-action="save-auth">Change password</button><button class="btn" data-action="logout">Logout</button></div>
-            <p class="hint">This is a screen lock for a frontend-only app: it keeps casual users out but is not bank-grade security. The login is stored only in this browser and is not part of the JSON backup.</p>
-          </div>
-        </div>
-
         <div class="card" id="drive-card">
           <div class="card-head"><h3>Google Drive</h3></div>
           <div class="card-body">
@@ -396,41 +381,10 @@
   </div>
 </div>
 
-<div id="auth-gate" class="auth-gate">
-  <form id="auth-form" class="auth-card" autocomplete="on" novalidate>
-    <div class="auth-brand"><span class="brand-logo" id="gate-logo"><svg viewBox="0 0 32 32" width="44" height="44" aria-hidden="true"><path d="M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z" fill="#D62828"/><path d="M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z" fill="#FFB703"/></svg></span><strong id="gate-name">Ameer Fire and Safety</strong>
-    </div>
-    <h2 id="auth-title">Sign in</h2>
-    <p id="auth-sub" class="hint"></p>
-    <label class="fld"><span class="lbl">Username</span><input type="text" name="user" autocomplete="username" maxlength="40"></label>
-    <label class="fld"><span class="lbl">Password</span><input type="password" name="pass" autocomplete="current-password" maxlength="100"></label>
-    <label class="auth-remember"><input type="checkbox" name="remember"> Keep me signed in on this device</label>
-    <p id="auth-err" class="auth-err" role="alert"></p>
-    <button type="submit" id="auth-submit" class="btn btn-primary btn-block">Sign in</button>
-    <button type="button" id="auth-forgot" class="link-btn" data-action="auth-forgot">Forgot password?</button>
-    <div id="auth-reset-box" class="auth-reset hidden">
-      <div id="rs-step1">
-        <p class="hint"><strong>Reset password</strong> — answer the developer security questions. Your data is not erased.</p>
-        <label class="fld"><span class="lbl">Developer name</span><input type="text" id="rs-name" autocomplete="off" maxlength="80"></label>
-        <label class="fld"><span class="lbl">Developer email ID</span><input type="text" id="rs-email" autocomplete="off" maxlength="80"></label>
-        <label class="fld"><span class="lbl">Developer phone number</span><input type="text" id="rs-phone" autocomplete="off" maxlength="25" inputmode="tel"></label>
-        <label class="fld"><span class="lbl">Developer Emirates ID no.</span><input type="text" id="rs-eid" autocomplete="off" maxlength="25" inputmode="numeric"></label>
-        <button type="button" id="rs-verify" class="btn btn-accent btn-block" data-action="auth-verify">Verify answers</button>
-      </div>
-      <div id="rs-step2" class="hidden">
-        <p class="hint"><strong>Answers verified.</strong> Choose a new password (min 6 characters).</p>
-        <label class="fld"><span class="lbl">New password</span><input type="password" id="rs-new" autocomplete="new-password" maxlength="100"></label>
-        <label class="fld"><span class="lbl">Confirm new password</span><input type="password" id="rs-new2" autocomplete="new-password" maxlength="100"></label>
-        <button type="button" class="btn btn-accent btn-block" data-action="auth-setpw">Save new password</button>
-      </div>
-    </div>
-  </form>
-</div>
-
 <div id="modal-root" aria-live="polite"></div>
 <div id="toasts" aria-live="polite"></div>
 <input type="file" id="import-file" accept=".json,application/json" hidden>
 
-<script src="app.js?v=20261026b"></script>
+<script src="app.js?v=20261026c"></script>
 </body>
 </html>

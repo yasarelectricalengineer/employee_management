@@ -258,7 +258,7 @@
     return activity;
   }
   function saveActivity() { try { localStorage.setItem('activityLog', JSON.stringify(act())); } catch (e) { /* ignore */ } }
-  function adminName() { return 'AMEERFIRE'; }
+  function adminName() { return 'Admin'; }
   function touch(coll, action, n, msg) {
     if (suppressAct) return;
     var a = act(), at = new Date().toISOString(), by = adminName(); n = n || 1;
@@ -839,7 +839,7 @@
     var lb = db.appSettings.lastBackup;
     html += '<p class="hint">Last backup downloaded from this browser: <strong>' + (lb ? esc(new Date(lb).toLocaleString()) : 'never') + '</strong></p>';
     $('#backup-summary').innerHTML = html;
-    renderAuthCard(); renderCompanyCard(); renderMenuCard();
+    renderCompanyCard(); renderMenuCard();
     var di = $('#drive-input');
     if (di && document.activeElement !== di) di.value = driveUrl();
     var dl = $('#drive-open'); if (dl) dl.href = driveUrl();
@@ -1947,16 +1947,11 @@
       case 'export-drive': exportToDrive(); break;
       case 'import-drive': importFromDrive(); break;
       case 'save-drive': saveDriveLink(false); break;
-      case 'logout': logout(); break;
       case 'save-company': saveCompanyName(); break;
       case 'save-menu': saveMenuLabels(false); break;
       case 'reset-menu': saveMenuLabels(true); break;
       case 'pick-logo': $('#logo-file').click(); break;
       case 'reset-logo': resetLogo(); break;
-      case 'save-auth': saveCredentials(); break;
-      case 'auth-forgot': toggleForgot(); break;
-      case 'auth-verify': verifySecurity(); break;
-      case 'auth-setpw': setNewPassword(); break;
       case 'reset-drive': saveDriveLink(true); break;
       case 'print-report': window.print(); break;
       case 'csv-emp': exportCsv('emp'); break;
@@ -1996,7 +1991,6 @@
     if (e.target.id === 'bulk-form') { e.preventDefault(); applyBulkEdit(e.target); }
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && e.target.id && e.target.id.indexOf('rs-') === 0) { e.preventDefault(); if (e.target.id === 'rs-new' || e.target.id === 'rs-new2') setNewPassword(); else verifySecurity(); return; }
     if (e.key === 'Enter' && e.target.id === 'company-name') { e.preventDefault(); saveCompanyName(); return; }
     if (e.key === 'Enter' && e.target.id === 'drive-input') { e.preventDefault(); saveDriveLink(false); return; }
     if (e.key === 'Enter' && e.target.classList && (e.target.classList.contains('edit-a') || e.target.classList.contains('edit-b') || e.target.classList.contains('add-name'))) {
@@ -2016,148 +2010,10 @@
   function startApp() {
     if (appStarted) return; appStarted = true;
     document.body.classList.remove('locked');
-    $('#auth-gate').classList.add('hidden');
     Object.keys(FILTER_DEFAULTS).forEach(syncFilterInputs);
     showView(location.hash.slice(1));
   }
 
-  /* ================= Login (screen lock) =================
-     Frontend-only: the username and a salted password hash are kept in this browser (key "appAuth",
-     never included in backups). This keeps casual users out; it is not server-grade security. */
-  var AUTH_USER = 'AMEERFIRE', AUTH_SALT = 'ameerfire-static-v1', AUTH_ITER = 20000;
-  var AUTH_HASH = '090af637c89cbbd85df1dbe8b828dfbdb532f447d19c86f202d8742db76ba6b7';
-  var SEC_SALT = 'ameerfire-sec-v1';
-  var SEC_HASH = { name: 'd27865ebda21eb260b08a325a5a61c72708b16da96f60202f4847af4835a1769', email: '19c6a87d1d05fd456e6a05ccb7c12573c7891edc37d45d5e1a31f68ad21e965d', phone: '59fe0bf1724c7b79f3720eb89ea6274d44c0d8b697ac82700b37454d03691789', eid: '57f3c2936063d8377439e5a6dbbc7cad1f7aef542bda79ac26a9c9a27841df78' };
-  /* Pure-JS SHA-256 so login works identically in every browser/context (no dependency on crypto.subtle). */
-  var K256 = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
-  function sha256(msg) {
-    var H0 = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19], l = msg.length, n = ((l + 9 + 63) >> 6) << 6, p = new Uint8Array(n), w = new Array(64), i, j;
-    p.set(msg); p[l] = 0x80;
-    var bits = l * 8; p[n - 4] = (bits >>> 24) & 255; p[n - 3] = (bits >>> 16) & 255; p[n - 2] = (bits >>> 8) & 255; p[n - 1] = bits & 255;
-    for (var o = 0; o < n; o += 64) {
-      for (i = 0; i < 16; i++) w[i] = (p[o + 4 * i] << 24) | (p[o + 4 * i + 1] << 16) | (p[o + 4 * i + 2] << 8) | p[o + 4 * i + 3];
-      for (i = 16; i < 64; i++) {
-        var a0 = w[i - 15], a1 = w[i - 2];
-        var s0 = ((a0 >>> 7) | (a0 << 25)) ^ ((a0 >>> 18) | (a0 << 14)) ^ (a0 >>> 3), s1 = ((a1 >>> 17) | (a1 << 15)) ^ ((a1 >>> 19) | (a1 << 13)) ^ (a1 >>> 10);
-        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
-      }
-      var a = H0[0], b = H0[1], c = H0[2], d = H0[3], e = H0[4], f = H0[5], g = H0[6], hh = H0[7];
-      for (j = 0; j < 64; j++) {
-        var S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7)), ch = (e & f) ^ (~e & g);
-        var t1 = (hh + S1 + ch + K256[j] + w[j]) | 0;
-        var S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10)), mj = (a & b) ^ (a & c) ^ (b & c);
-        var t2 = (S0 + mj) | 0;
-        hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
-      }
-      H0[0] = (H0[0] + a) | 0; H0[1] = (H0[1] + b) | 0; H0[2] = (H0[2] + c) | 0; H0[3] = (H0[3] + d) | 0;
-      H0[4] = (H0[4] + e) | 0; H0[5] = (H0[5] + f) | 0; H0[6] = (H0[6] + g) | 0; H0[7] = (H0[7] + hh) | 0;
-    }
-    var out = new Uint8Array(32);
-    for (i = 0; i < 8; i++) { out[4 * i] = H0[i] >>> 24; out[4 * i + 1] = (H0[i] >>> 16) & 255; out[4 * i + 2] = (H0[i] >>> 8) & 255; out[4 * i + 3] = H0[i] & 255; }
-    return out;
-  }
-  function utf8(s) {
-    s = unescape(encodeURIComponent(String(s)));
-    var b = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b;
-  }
-  function concatB(a, b) { var r = new Uint8Array(a.length + b.length); r.set(a); r.set(b, a.length); return r; }
-  function hex(b) { var s = ''; for (var i = 0; i < b.length; i++) s += ('0' + b[i].toString(16)).slice(-2); return s; }
-  function hashPw(pw, salt, iter) {
-    var sb = utf8(salt), x = sha256(utf8(salt + '|' + pw));
-    for (var i = 1; i < (iter || AUTH_ITER); i++) x = sha256(concatB(x, sb));
-    return hex(x);
-  }
-  function newSalt() {
-    try { var a = new Uint8Array(12); window.crypto.getRandomValues(a); return hex(a); } catch (e) { return String(Date.now()) + String(Math.random()).slice(2); }
-  }
-  /* The login is fixed (AMEERFIRE). A password changed through "Forgot password" / Login & Security
-     is stored (salted hash only) under appAuth2 and replaces the built-in password in this browser. */
-  function getAuth() {
-    try {
-      var a = JSON.parse(localStorage.getItem('appAuth2'));
-      if (a && a.salt && a.hash) return { user: AUTH_USER, salt: String(a.salt), hash: String(a.hash) };
-    } catch (e) { /* ignore */ }
-    return { user: AUTH_USER, salt: AUTH_SALT, hash: AUTH_HASH };
-  }
-  function setPassword(pw) {
-    var salt = newSalt();
-    try { localStorage.setItem('appAuth2', JSON.stringify({ salt: salt, hash: hashPw(pw, salt) })); return true; } catch (e) { return false; }
-  }
-  function secNorm(k, v) {
-    v = String(v || '').trim().toLowerCase();
-    if (k === 'name') return v.replace(/\s+/g, ' ');
-    if (k === 'email') return v.replace(/\s+/g, '');
-    var d = v.replace(/\D+/g, '');
-    if (k === 'phone') { if (d.indexOf('00971') === 0) d = d.slice(5); else if (d.indexOf('971') === 0) d = d.slice(3); if (d && d.charAt(0) !== '0') d = '0' + d; }
-    return d;
-  }
-  function secOk(k, v) { var n = secNorm(k, v); return !!n && hashPw(n, SEC_SALT + '-' + k, 5000) === SEC_HASH[k]; }
-  var authFails = 0, secFails = 0, secVerified = false;
-  function showGate() {
-    var f = $('#auth-form');
-    $('#auth-title').textContent = 'Sign in';
-    $('#auth-sub').textContent = 'Enter your username and password to continue.';
-    f.reset(); $('#auth-err').textContent = '';
-    $('#auth-reset-box').classList.add('hidden'); secVerified = false;
-    $('#auth-gate').classList.remove('hidden');
-    document.body.classList.add('locked');
-    setTimeout(function () { f.elements.user.focus(); }, 30);
-  }
-  function authErr(msg, field) { $('#auth-err').textContent = msg; if (field) field.focus(); }
-  function onAuthSubmit(e) {
-    e.preventDefault();
-    var f = e.target, user = f.elements.user.value.trim(), pw = f.elements.pass.value, btn = $('#auth-submit');
-    if (!user) return authErr('Enter your username.', f.elements.user);
-    if (!pw) return authErr('Enter your password.', f.elements.pass);
-    var a = getAuth(); btn.disabled = true;
-    var good = user.toLowerCase() === a.user.toLowerCase() && hashPw(pw, a.salt) === a.hash;
-    setTimeout(function () {
-      btn.disabled = false;
-      if (good) { authFails = 0; sessionOn(f.elements.remember.checked); startApp(); return; }
-      authFails++; f.elements.pass.value = '';
-      authErr('Wrong username or password.' + (authFails >= 3 ? ' (Attempt ' + authFails + ')' : ''), f.elements.pass);
-    }, Math.min(authFails, 5) * 700);
-  }
-  function toggleForgot() {
-    var box = $('#auth-reset-box'); box.classList.toggle('hidden');
-    $('#auth-err').textContent = '';
-    if (!box.classList.contains('hidden')) { secVerified = false; $('#rs-step1').classList.remove('hidden'); $('#rs-step2').classList.add('hidden'); $('#rs-name').focus(); }
-  }
-  function verifySecurity() {
-    var v = { name: $('#rs-name').value, email: $('#rs-email').value, phone: $('#rs-phone').value, eid: $('#rs-eid').value };
-    if (!v.name.trim() || !v.email.trim() || !v.phone.trim() || !v.eid.trim()) { authErr('Answer all four security questions.'); return; }
-    var good = ['name', 'email', 'phone', 'eid'].map(function (k) { return secOk(k, v[k]); }).every(Boolean);
-    var btn = $('#rs-verify'); btn.disabled = true;
-    setTimeout(function () {
-      btn.disabled = false;
-      if (!good) { secFails++; authErr('Security answers do not match.' + (secFails >= 3 ? ' (Attempt ' + secFails + ')' : '')); return; }
-      secFails = 0; secVerified = true; authErr('');
-      $('#rs-step1').classList.add('hidden'); $('#rs-step2').classList.remove('hidden'); $('#rs-new').focus();
-    }, Math.min(secFails, 5) * 1000);
-  }
-  function setNewPassword() {
-    if (!secVerified) { authErr('Verify the security answers first.'); return; }
-    var p = $('#rs-new').value, p2 = $('#rs-new2').value;
-    if (p.length < 6) { authErr('New password must be at least 6 characters.', $('#rs-new')); return; }
-    if (p !== p2) { authErr('The two passwords do not match.', $('#rs-new2')); return; }
-    if (!setPassword(p)) { authErr('Could not save — browser storage is blocked.'); return; }
-    ['rs-name', 'rs-email', 'rs-phone', 'rs-eid', 'rs-new', 'rs-new2'].forEach(function (id) { $('#' + id).value = ''; });
-    secVerified = false; authFails = 0;
-    $('#auth-reset-box').classList.add('hidden');
-    $('#auth-err').textContent = 'Password changed. Sign in with the new password.';
-    $('#auth-form').elements.pass.focus();
-  }
-  function sessionOn(remember) {
-    try { sessionStorage.setItem('authOk', '1'); } catch (e) { /* ignore */ }
-    try { if (remember) localStorage.setItem('authRemember', '1'); else localStorage.removeItem('authRemember'); } catch (e) { /* ignore */ }
-  }
-  function sessionIsOn() {
-    try { return sessionStorage.getItem('authOk') === '1' || localStorage.getItem('authRemember') === '1'; } catch (e) { return false; }
-  }
-  function logout() {
-    try { sessionStorage.removeItem('authOk'); localStorage.removeItem('authRemember'); } catch (e) { /* ignore */ }
-    location.reload();
-  }
   var DEFAULT_LOGO_HTML = {};
   function applyBranding() {
     var s = db.appSettings; COMPANY = normCompany(s.companyName);
@@ -2247,26 +2103,11 @@
     db.appSettings.companyLogo = ''; if (!save('appSettings')) return;
     applyBranding(); renderCompanyCard(); toast('Logo removed — default logo restored.');
   }
-  function renderAuthCard() {
-    var u = $('#sec-user'); if (u) u.value = AUTH_USER;
-  }
-  function saveCredentials() {
-    var a = getAuth(), cur = $('#sec-cur'), p = $('#sec-new'), p2 = $('#sec-new2');
-    function bad(m, el) { toast(m, 'error'); if (el) { el.classList.add('invalid'); el.focus(); } }
-    [cur, p, p2].forEach(function (x) { x.classList.remove('invalid'); });
-    if (!cur.value) return bad('Enter your current password.', cur);
-    if (hashPw(cur.value, a.salt) !== a.hash) return bad('Current password is wrong.', cur);
-    if (p.value.length < 6) return bad('New password must be at least 6 characters.', p);
-    if (p.value !== p2.value) return bad('The two new passwords do not match.', p2);
-    if (!setPassword(p.value)) return toast('Could not save — browser storage is blocked.', 'error');
-    cur.value = ''; p.value = ''; p2.value = '';
-    toast('Password updated.');
-  }
-  var APP_VERSION = '20261026b';
+  var APP_VERSION = '20261026c';
   function staleCheck() {
     if (typeof document.getElementById !== 'function') return false;
     var meta = document.querySelector('meta[name="app-version"]');
-    var need = ['auth-form', 'auth-gate', 'menulabels-grid', 'activity-body', 'leave-out-pane', 'outsiderLeave-table'];
+    var need = ['menulabels-grid', 'activity-body', 'leave-out-pane', 'outsiderLeave-table'];
     var missing = need.some(function (id) { return !document.getElementById(id); });
     if (!missing && meta && meta.getAttribute('content') === APP_VERSION) return false;
     var d = document.createElement('div'); d.className = 'banner stale-banner';
@@ -2281,8 +2122,7 @@
     if (!storageWorks()) $('#storage-warning').classList.remove('hidden');
     loadAll();
     applyBranding(); applyMenuLabels();
-    $('#auth-form').addEventListener('submit', onAuthSubmit);
-    if (sessionIsOn()) startApp(); else showGate();
+    startApp();
   }
   init();
 })();
