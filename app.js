@@ -5,12 +5,12 @@
 
   /* ================= Constants ================= */
   var MENU_DEFAULTS = {
-    dashboard: 'Dashboard', employees: 'Employees', leaves: 'Leave', ot: 'Employee OT', advances: 'Advance', holidays: 'Holidays',
-    sepOutside: 'Outside Workers', outsiders: 'Outside Workers', outsiderWork: 'Outside Worker Work', outsiderLeave: 'Outside Worker Leave', outsiderOT: 'Outside Worker OT',
+    dashboard: 'Dashboard', employees: 'Employees', leaves: 'Leave', ot: 'Employee OT', advances: 'Advance', deductions: 'Deductions', holidays: 'Holidays',
+    sepOutside: 'Outside Workers', outsiders: 'Outside Workers', outsiderWork: 'Outside Worker Work', outsiderLeave: 'Outside Worker Leave', outsiderOT: 'Outside Worker OT', outsiderSalary: 'Outside Worker Salary',
     sepOutput: 'Output', reports: 'Monthly Reports', activity: 'Activity Log', backup: 'Backup & Drive',
     tagline: 'Staff · Leave · OT · Advance', whoEmp: 'Company Employee', whoOut: 'Outside Employee'
   };
-  var MENU_GROUPS = [['Main menu', ['dashboard', 'employees', 'leaves', 'ot', 'advances', 'holidays']], ['Outside workers section', ['sepOutside', 'outsiders', 'outsiderWork', 'outsiderLeave', 'outsiderOT']],
+  var MENU_GROUPS = [['Main menu', ['dashboard', 'employees', 'leaves', 'ot', 'advances', 'deductions', 'holidays']], ['Outside workers section', ['sepOutside', 'outsiders', 'outsiderWork', 'outsiderLeave', 'outsiderOT', 'outsiderSalary']],
     ['Output section', ['sepOutput', 'reports', 'activity', 'backup']], ['Other labels', ['tagline', 'whoEmp', 'whoOut']]];
   var MENU_HINT = { sepOutside: 'Section heading', sepOutput: 'Section heading', tagline: 'Small text under company name', whoEmp: 'Leave page switch', whoOut: 'Leave page switch' };
   function normMenu(m) {
@@ -26,10 +26,10 @@
   var DEFAULT_COMPANY = 'Ameer Fire and Safety';
   var COMPANY = DEFAULT_COMPANY;
   var DRIVE_URL = 'https://drive.google.com/drive/folders/12FOBPx6i20ETWm7WgNl1muJILucahRjl?usp=drive_link';
-  var DATA_KEYS = ['employees', 'leaves', 'employeeOT', 'advances', 'outsideWorkers', 'outsideWorkerWork', 'outsideWorkerLeave', 'outsideWorkerOT', 'holidays'];
+  var DATA_KEYS = ['employees', 'leaves', 'employeeOT', 'advances', 'outsideWorkers', 'outsideWorkerWork', 'outsideWorkerLeave', 'outsideWorkerOT', 'outsideWorkerSalary', 'deductions', 'holidays'];
   var ALL_KEYS = DATA_KEYS.concat(['appSettings']);
   var OT_TYPES = { normal: 'Normal Hour OT', sunday: 'Sunday / Special OT', night: 'Night OT' };
-  var DEFAULT_SETTINGS = { currency: 'AED', lastBackup: null, driveUrl: DRIVE_URL, companyName: DEFAULT_COMPANY, companyLogo: '' };
+  var DEFAULT_SETTINGS = { currency: 'AED', lastBackup: null, driveUrl: DRIVE_URL, companyName: DEFAULT_COMPANY, companyLogo: '', salaryDate: '' };
   function normCompany(n) { n = String(n == null ? '' : n).trim().replace(/\s+/g, ' ').slice(0, 60); return n || DEFAULT_COMPANY; }
   function normLogo(l) { return typeof l === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(l) && l.length < 600000 ? l : ''; }
   function normDrive(u) {
@@ -80,10 +80,10 @@
     (Array.isArray(o.hiddenSrc) ? o.hiddenSrc : []).forEach(function (k) { if ((k === 'src1' || k === 'src2') && r.hiddenSrc.indexOf(k) === -1) r.hiddenSrc.push(k); });
     return r;
   }
-  var VIEWS = ['dashboard', 'employees', 'leaves', 'ot', 'advances', 'holidays', 'outsiders', 'outsiderWork', 'outsiderLeave', 'outsiderOT', 'reports', 'activity', 'backup'];
+  var VIEWS = ['dashboard', 'employees', 'leaves', 'ot', 'advances', 'deductions', 'holidays', 'outsiders', 'outsiderWork', 'outsiderLeave', 'outsiderOT', 'outsiderSalary', 'reports', 'activity', 'backup'];
   var TITLES = {
     dashboard: 'Dashboard', employees: 'Employees', leaves: 'Leave Management', ot: 'Employee OT',
-    advances: 'Advances', holidays: 'Holidays', outsiders: 'Outside Workers', outsiderWork: 'Outside Worker Work', outsiderLeave: 'Outside Worker Leave', outsiderOT: 'Outside Worker OT',
+    advances: 'Advances', deductions: 'Deductions', holidays: 'Holidays', outsiders: 'Outside Workers', outsiderWork: 'Outside Worker Work', outsiderLeave: 'Outside Worker Leave', outsiderOT: 'Outside Worker OT', outsiderSalary: 'Outside Worker Salary',
     reports: 'Monthly Reports', activity: 'Activity & Last Updated', backup: 'Backup & Google Drive'
   };
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -99,6 +99,8 @@
     report: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
     database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
     menu: '<path d="M3 12h18M3 6h18M3 18h18"/>',
+    minus: '<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>',
+    wallet: '<path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
     flame: '<path d="M12 2c1 4-3 6-4.5 9.5C6 15 8 20 12 22c4-2 6-7 4.5-10.5-.8-1.7-2-2.8-2.7-4.5C13 8 12.5 5 12 2z"/>'
   };
   function svg(name) {
@@ -217,6 +219,7 @@
         st.companyName = normCompany(st.companyName);
         st.companyLogo = normLogo(st.companyLogo);
         st.menuLabels = normMenu(st.menuLabels);
+        st.salaryDate = isDate(String(st.salaryDate || '')) ? String(st.salaryDate) : '';
         return st;
       }
       return Array.isArray(v) ? v.filter(function (x) { return x && typeof x === 'object'; }) : [];
@@ -231,6 +234,7 @@
   /* ================= Activity tracking (automatic, read-only) ================= */
   var activity = null, suppressAct = 0;
   var ACT_NAMES = { leaves: 'Leave', employeeOT: 'Employee OT', advances: 'Advance', outsideWorkerWork: 'Outside Worker Work', outsideWorkerLeave: 'Outside Worker Leave', outsideWorkerOT: 'Outside Worker OT',
+    outsideWorkerSalary: 'Outside Worker Salary', deductions: 'Deductions',
     employees: 'Employees', outsideWorkers: 'Outside Workers', holidays: 'Holidays', appSettings: 'Settings', backup: 'Backup', all: 'All data' };
   function normStamp(s) { s = String(s || ''); return /^\d{4}-\d{2}-\d{2}T/.test(s) && !isNaN(Date.parse(s)) ? s : ''; }
   function normActivity(a) {
@@ -287,7 +291,9 @@
     employees: function () { return { q: '', status: '', dept: '' }; },
     leaves: function () { return { month: '', emp: '', type: '', q: '' }; },
     ot: function () { return { month: '', emp: '', type: '', q: '' }; },
-    advances: function () { return { month: '', emp: '', q: '' }; },
+    advances: function () { return { month: '', emp: '', q: '', status: 'pending' }; },
+    deductions: function () { return { month: '', emp: '', type: '', q: '' }; },
+    outsiderSalary: function () { return { month: '', worker: '', source: '', q: '' }; },
     outsiders: function () { return { q: '', source: '', status: '' }; },
     holidays: function () { return { month: monthNow(), q: '' }; },
     outsiderWork: function () { return { month: '', worker: '', type: '', source: '', q: '' }; },
@@ -470,6 +476,9 @@
     var wdList = db.outsideWorkerWork.filter(function (x) { return inMonth(x, m); });
     var wlList = db.outsideWorkerLeave.filter(function (x) { return inMonth(x, m); });
     var adv = sumAdv(db.advances.filter(function (a) { return inMonth(a, m); }));
+    var advNC = db.advances.filter(function (a) { return !isCleared(a); });
+    var dedList = db.deductions.filter(function (d) { return inMonth(d, m); });
+    var salBal = Object.keys(latestSalary(db.outsideWorkerSalary)).reduce(function (s, k) { return s + (Number(latestSalary(db.outsideWorkerSalary)[k].balance) || 0); }, 0);
     var activeE = db.employees.filter(function (e) { return e.status === 'Active'; }).length;
     var activeW = db.outsideWorkers.filter(function (w) { return w.status === 'Active'; }).length;
     var isEmpty = !DATA_KEYS.some(function (k) { return db[k].length; });
@@ -491,6 +500,9 @@
       (ot.holiday > 0 ? stat('Holiday OT Hours', fmtNum(ot.holiday), 'Included in total OT', 'y') : '') +
       stat('Total OT Hours', fmtNum(ot.total), 'Employees') +
       stat('Total Advance', money(adv), m ? 'Given in ' + esc(monthLabel(m)) : 'All time', 'd') +
+      stat('Advance Not Cleared', money(sumAdv(advNC)), fmtNum(advNC.length) + ' entr' + (advNC.length === 1 ? 'y' : 'ies') + ' · all months', 'd') +
+      stat('Deductions', money(sumAdv(dedList)), fmtNum(dedList.length) + ' record(s)', 'd') +
+      stat('Worker Salary Balance', money(salBal), 'Latest pending · outside workers', 'd') +
       '</div>';
     html += cardOf('Outside Workers — Work & OT', periodLabel(m),
       '<div class="card-body"><div class="stats small" style="margin:0">' +
@@ -584,31 +596,146 @@
       })));
   }
 
+  /* ----- Advance clearing ----- */
+  function advStatus(a) {
+    if (a.clearedMode === 'cleared') return 'Cleared';
+    if (a.clearedMode === 'pending') return 'Not Cleared';
+    var sd = db.appSettings.salaryDate;
+    return sd && String(a.date) <= sd ? 'Cleared' : 'Not Cleared';
+  }
+  function isCleared(a) { return advStatus(a) === 'Cleared'; }
+  function autoClearedCount() {
+    var sd = db.appSettings.salaryDate;
+    return sd ? db.advances.filter(function (a) { return (!a.clearedMode || a.clearedMode === 'auto') && String(a.date) <= sd; }).length : 0;
+  }
+  function salaryBoxHtml(id) {
+    var sd = db.appSettings.salaryDate || '';
+    return '<div class="salary-box"><label class="fld"><span class="lbl">Previous month salary date</span><span class="addrow">' +
+      '<input type="date" id="' + id + '" value="' + esc(sd) + '"><button type="button" class="btn btn-sm btn-accent" data-action="save-salary-date" data-input="' + id + '">Save date</button>' +
+      (sd ? '<button type="button" class="btn btn-sm" data-action="clear-salary-date" data-input="' + id + '">Clear date</button>' : '') + '</span></label>' +
+      '<p class="hint">' + (sd ? 'Every advance dated on or before <strong>' + esc(fmtDate(sd)) + '</strong> is moved to <strong>Cleared Advance</strong> automatically (' + autoClearedCount() +
+        ' right now). You can still change any single advance manually.' : 'Not set — no advance is cleared automatically. Set it after each month\'s salary is paid.') + '</p></div>';
+  }
+  function saveSalaryDate(el, clear) {
+    var inp = $('#' + el.dataset.input), v = clear ? '' : (inp ? inp.value : '');
+    if (!clear && !isDate(v)) { if (inp) { inp.classList.add('invalid'); inp.focus(); } toast('Pick a valid date.', 'error'); return; }
+    db.appSettings.salaryDate = v;
+    if (!save('appSettings')) return;
+    renderView(ui.view === 'backup' ? 'backup' : 'advances');
+    toast(v ? 'Salary date saved — ' + autoClearedCount() + ' advance(s) are now Cleared automatically.' : 'Salary date cleared.');
+  }
+  function toggleAdvance(id) {
+    var rec = db.advances.find(function (x) { return x.id === id; }); if (!rec) return;
+    var wasCleared = isCleared(rec);
+    rec.clearedMode = wasCleared ? 'pending' : 'cleared'; rec.updatedAt = new Date().toISOString();
+    if (!save('advances')) return;
+    touch('advances', 'edit', 1, 'Marked ' + (wasCleared ? 'Not Cleared' : 'Cleared') + ': ' + FORMS.advances.describe(rec));
+    renderCurrent(); toast('Marked as ' + (wasCleared ? 'Not Cleared' : 'Cleared') + ' (manual).');
+  }
+  function statusCell(a) {
+    var c = isCleared(a), manual = a.clearedMode === 'cleared' || a.clearedMode === 'pending';
+    return '<div class="status-cell"><span class="badge ' + (c ? 'b-cleared' : 'b-pending') + '">' + (c ? 'Cleared' : 'Not Cleared') + '</span><span class="muted small">' + (manual ? 'manual' : 'auto') + '</span>' +
+      '<button type="button" class="link-btn" data-action="adv-toggle" data-id="' + esc(a.id) + '">' + (c ? 'Mark not cleared' : 'Mark cleared') + '</button></div>';
+  }
   function renderAdvances() {
     var f = ui.f.advances, m = vm(f.month);
-    var box = $('#advances-table'), sum = $('#advances-summary');
+    var box = $('#advances-table'), sum = $('#advances-summary'), sb = $('#salary-box-adv');
+    $$('input[name="advStatus"]').forEach(function (r) { r.checked = r.value === (f.status || 'pending'); });
+    if (sb && !sb.contains(document.activeElement)) sb.innerHTML = salaryBoxHtml('salary-date-adv');
     if (!db.advances.length) { sum.innerHTML = ''; box.innerHTML = emptyState('No advances recorded', 'Add an advance given to an employee.', '+ Add Advance', 'advances'); return; }
     function base(a) { return (!f.emp || a.employeeId === f.emp) && matchQ(f.q, empName(a.employeeId), empCode(a.employeeId), a.reason, a.notes); }
     var scoped = db.advances.filter(base);
-    var rows = scoped.filter(function (a) { return inMonth(a, m); }).sort(byDateDesc);
-    if (!rows.length) { sum.innerHTML = ''; box.innerHTML = noMatch('advances'); return; }
+    var ncl = scoped.filter(function (a) { return !isCleared(a); }), cl = scoped.filter(isCleared);
+    var st = f.status || 'pending';
+    var inStatus = scoped.filter(function (a) { return st === 'all' || (st === 'cleared') === isCleared(a); });
+    var rows = inStatus.filter(function (a) { return inMonth(a, m); }).sort(byDateDesc);
+    var stats = '<div class="stats small" style="margin-bottom:16px">' +
+      stat('Not Cleared Advance', money(sumAdv(ncl)), fmtNum(ncl.length) + ' entr' + (ncl.length === 1 ? 'y' : 'ies'), 'd') +
+      stat('Cleared Advance', money(sumAdv(cl)), fmtNum(cl.length) + ' entr' + (cl.length === 1 ? 'y' : 'ies')) +
+      stat('Cleared up to', db.appSettings.salaryDate ? esc(fmtDate(db.appSettings.salaryDate)) : 'Not set', 'Previous month salary date', 'y') + '</div>';
+    if (!rows.length) {
+      sum.innerHTML = stats;
+      box.innerHTML = '<div class="empty small"><p>' + (inStatus.length ? 'No records match your filters.' : st === 'cleared' ? 'No cleared advances yet.' : st === 'pending' ? 'No pending (not cleared) advances.' : 'No advances.') + '</p>' +
+        '<button class="btn btn-sm" data-action="clear-filters" data-view="advances">Clear Filters</button></div>';
+      return;
+    }
     var g = group(rows, function (a) { return a.employeeId; });
     var erows = Array.from(g.entries()).map(function (en) { return { id: en[0], n: en[1].length, total: sumAdv(en[1]) }; })
       .sort(function (a, b) { return empName(a.id).localeCompare(empName(b.id)); });
-    var mg = group(scoped, function (a) { return String(a.date).slice(0, 7); });
+    var mg = group(inStatus, function (a) { return String(a.date).slice(0, 7); });
     var mrows = Array.from(mg.entries()).map(function (en) { return { m: en[0], n: en[1].length, total: sumAdv(en[1]) }; })
       .sort(function (a, b) { return b.m.localeCompare(a.m); });
-    sum.innerHTML = '<div class="grid-2" style="margin-bottom:16px">' +
-      cardOf('Employee-wise Advance Totals', periodLabel(m), tbl(['Employee', 'Entries', 'Total Advance'],
+    var tag = st === 'cleared' ? 'Cleared' : st === 'pending' ? 'Not Cleared' : 'All';
+    sum.innerHTML = stats + '<div class="grid-2" style="margin-bottom:16px">' +
+      cardOf('Employee-wise Advance Totals', tag + ' · ' + periodLabel(m), tbl(['Employee', 'Entries', 'Total Advance'],
         erows.map(function (x) { return [empCell(x.id), fmtNum(x.n), '<strong>' + money(x.total) + '</strong>']; }),
         ['Total', fmtNum(rows.length), money(sumAdv(rows))])) +
-      cardOf('Monthly Advance Totals', f.emp ? 'Selected employee' : 'All employees', tbl(['Month', 'Entries', 'Total Advance'],
+      cardOf('Monthly Advance Totals', tag + (f.emp ? ' · Selected employee' : ''), tbl(['Month', 'Entries', 'Total Advance'],
         mrows.map(function (x) { return [esc(monthLabel(x.m)) + (x.m === m ? ' <span class="chip">selected</span>' : ''), fmtNum(x.n), '<strong>' + money(x.total) + '</strong>']; }),
-        ['All months', fmtNum(scoped.length), money(sumAdv(scoped))])) + '</div>';
-    box.innerHTML = cardOf('Advance Records', rows.length + ' record(s)', tbl(
-      ['Date', 'Employee', 'Amount', 'Reason', 'Notes', 'Actions'],
+        ['All months', fmtNum(inStatus.length), money(sumAdv(inStatus))])) + '</div>';
+    function dim(a, html) { return isCleared(a) ? '<span class="dim">' + html + '</span>' : html; }
+    box.innerHTML = cardOf((st === 'cleared' ? 'Cleared' : st === 'pending' ? 'Not Cleared' : 'All') + ' Advance Records', rows.length + ' record(s)', tbl(
+      ['Date', 'Employee', 'Amount', 'Status', 'Reason', 'Notes', 'Actions'],
       rows.map(function (a) {
-        return [fmtDate(a.date), empCell(a.employeeId), '<strong>' + money(a.amount) + '</strong>', '<span class="wrap">' + dash(a.reason) + '</span>', '<span class="wrap">' + dash(a.notes) + '</span>', actions('advances', a.id)];
+        return [dim(a, fmtDate(a.date)), dim(a, empCell(a.employeeId)), dim(a, '<strong>' + money(a.amount) + '</strong>'), statusCell(a),
+          dim(a, '<span class="wrap">' + dash(a.reason) + '</span>'), dim(a, '<span class="wrap">' + dash(a.notes) + '</span>'), actions('advances', a.id)];
+      })));
+  }
+
+  /* ----- Deductions (employees) ----- */
+  function renderDeductions() {
+    var f = ui.f.deductions, m = vm(f.month);
+    var box = $('#deductions-table'), sum = $('#deductions-summary');
+    if (!db.deductions.length) { sum.innerHTML = ''; box.innerHTML = emptyState('No deductions recorded', 'Record advance or other amounts an employee took earlier that are to be deducted.', '+ Add Deduction', 'deductions'); return; }
+    var scoped = db.deductions.filter(function (d) {
+      return (!f.emp || d.employeeId === f.emp) && (!f.type || d.type === f.type) && matchQ(f.q, empName(d.employeeId), empCode(d.employeeId), d.reason, d.notes);
+    });
+    var rows = scoped.filter(function (d) { return inMonth(d, m); }).sort(byDateDesc);
+    if (!rows.length) { sum.innerHTML = ''; box.innerHTML = noMatch('deductions'); return; }
+    var g = group(rows, function (d) { return d.employeeId; });
+    var erows = Array.from(g.entries()).map(function (en) { return { id: en[0], n: en[1].length, total: sumAdv(en[1]) }; })
+      .sort(function (a, b) { return empName(a.id).localeCompare(empName(b.id)); });
+    sum.innerHTML = cardOf('Employee-wise Deductions', periodLabel(m), tbl(['Employee', 'Entries', 'Total Deduction'],
+      erows.map(function (x) { return [empCell(x.id), fmtNum(x.n), '<strong>' + money(x.total) + '</strong>']; }),
+      ['Total', fmtNum(rows.length), money(sumAdv(rows))]));
+    box.innerHTML = cardOf('Deduction Records', rows.length + ' record(s)', tbl(
+      ['Date', 'Employee', 'Type', 'Amount', 'Reason', 'Notes', 'Actions'],
+      rows.map(function (d) {
+        return [fmtDate(d.date), empCell(d.employeeId), esc(d.type), '<strong>' + money(d.amount) + '</strong>', '<span class="wrap">' + dash(d.reason) + '</span>', '<span class="wrap">' + dash(d.notes) + '</span>', actions('deductions', d.id)];
+      })));
+  }
+
+  /* ----- Outside worker salary ----- */
+  function latestSalary(list) {
+    var best = {};
+    list.forEach(function (x) {
+      var c = best[x.workerId];
+      if (!c || x.date > c.date || (x.date === c.date && String(x.createdAt || x.id) > String(c.createdAt || c.id))) best[x.workerId] = x;
+    });
+    return best;
+  }
+  function renderOutsiderSalary() {
+    var f = ui.f.outsiderSalary, m = vm(f.month);
+    var box = $('#outsiderSalary-table'), sum = $('#outsiderSalary-summary');
+    if (!db.outsideWorkerSalary.length) { sum.innerHTML = ''; box.innerHTML = emptyState('No salary records yet', 'Record the salary given to an outside worker up to a date and the balance still pending.', '+ Add Salary Record', 'outsiderSalary'); return; }
+    var rows = db.outsideWorkerSalary.filter(function (x) {
+      var w = workerById(x.workerId);
+      return inMonth(x, m) && (!f.worker || x.workerId === f.worker) && (!f.source || (w && w.source === f.source)) && matchQ(f.q, workerName(x.workerId), workerCode(x.workerId), x.notes);
+    }).sort(byDateDesc);
+    if (!rows.length) { sum.innerHTML = ''; box.innerHTML = noMatch('outsiderSalary'); return; }
+    var g = group(rows, function (x) { return x.workerId; }), late = latestSalary(rows);
+    var srows = Array.from(g.entries()).map(function (en) {
+      var l = late[en[0]];
+      return { id: en[0], n: en[1].length, given: r2(en[1].reduce(function (s, x) { return s + (Number(x.given) || 0); }, 0)), upto: l.date, bal: Number(l.balance) || 0 };
+    }).sort(function (a, b) { return workerName(a.id).localeCompare(workerName(b.id)); });
+    sum.innerHTML = cardOf('Worker-wise Salary Summary', periodLabel(m), tbl(['Worker', 'Entries', 'Total Given', 'Latest Paid Up To', 'Current Balance'],
+      srows.map(function (s) { return [workerCell(s.id), fmtNum(s.n), '<strong>' + money(s.given) + '</strong>', fmtDate(s.upto), '<strong>' + money(s.bal) + '</strong>']; }),
+      ['Total', fmtNum(rows.length), money(srows.reduce(function (a, s) { return a + s.given; }, 0)), '', money(srows.reduce(function (a, s) { return a + s.bal; }, 0))]));
+    box.innerHTML = cardOf('Salary Records', rows.length + ' record(s)', tbl(
+      ['Up To', 'Worker', 'Source', 'Given Salary', 'Balance', 'Notes', 'Actions'],
+      rows.map(function (x) {
+        var w = workerById(x.workerId);
+        return [fmtDate(x.date), workerCell(x.workerId), w ? esc(w.source) : '—', '<strong>' + money(x.given) + '</strong>', '<strong>' + money(x.balance) + '</strong>', '<span class="wrap">' + dash(x.notes) + '</span>', actions('outsiderSalary', x.id)];
       })));
   }
 
@@ -832,7 +959,7 @@
 
   /* ----- Backup view ----- */
   function renderBackup() {
-    var labels = { employees: 'Employees', leaves: 'Leave records', employeeOT: 'Employee OT', advances: 'Advances', outsideWorkers: 'Outside workers', outsideWorkerWork: 'Outside worker work days', outsideWorkerLeave: 'Outside worker leave records', outsideWorkerOT: 'Outside worker OT', holidays: 'Special holidays' };
+    var labels = { deductions: 'Deductions', outsideWorkerSalary: 'Outside worker salary records', employees: 'Employees', leaves: 'Leave records', employeeOT: 'Employee OT', advances: 'Advances', outsideWorkers: 'Outside workers', outsideWorkerWork: 'Outside worker work days', outsideWorkerLeave: 'Outside worker leave records', outsideWorkerOT: 'Outside worker OT', holidays: 'Special holidays' };
     var html = '<div class="count-grid">' + DATA_KEYS.map(function (k) {
       return '<div class="count"><strong>' + db[k].length + '</strong><span>' + labels[k] + '</span></div>';
     }).join('') + '</div>';
@@ -840,6 +967,7 @@
     html += '<p class="hint">Last backup downloaded from this browser: <strong>' + (lb ? esc(new Date(lb).toLocaleString()) : 'never') + '</strong></p>';
     $('#backup-summary').innerHTML = html;
     renderCompanyCard(); renderMenuCard();
+    var sbs = $('#salary-box-set'); if (sbs && !sbs.contains(document.activeElement)) sbs.innerHTML = salaryBoxHtml('salary-date-set');
     var di = $('#drive-input');
     if (di && document.activeElement !== di) di.value = driveUrl();
     var dl = $('#drive-open'); if (dl) dl.href = driveUrl();
@@ -848,7 +976,7 @@
   }
 
   var RENDER = {
-    dashboard: renderDashboard, employees: renderEmployees, leaves: renderLeaves, ot: renderOT, advances: renderAdvances,
+    dashboard: renderDashboard, employees: renderEmployees, leaves: renderLeaves, ot: renderOT, advances: renderAdvances, deductions: renderDeductions, outsiderSalary: renderOutsiderSalary,
     holidays: renderHolidays, outsiders: renderOutsiders, outsiderWork: renderOutsiderWork, outsiderLeave: function () { renderOutsiderLeave('outsiderLeave'); }, leavesOut: renderLeaves, outsiderOT: renderOutsiderOT, reports: renderReports, activity: renderActivity, backup: renderBackup
   };
   function renderView(v) {
@@ -874,7 +1002,7 @@
     return '<strong>' + stamp(e.at) + '</strong>' + (sub ? '<span class="sub">' + sub + '</span>' : '');
   }
   function renderActivity() {
-    var a = act(), mods = ['leaves', 'employeeOT', 'advances', 'outsideWorkerWork', 'outsideWorkerLeave', 'outsideWorkerOT', 'employees', 'outsideWorkers', 'holidays', 'appSettings'];
+    var a = act(), mods = ['leaves', 'employeeOT', 'advances', 'outsideWorkerWork', 'outsideWorkerLeave', 'outsideWorkerOT', 'outsideWorkerSalary', 'deductions', 'employees', 'outsideWorkers', 'holidays', 'appSettings'];
     var overall = '';
     mods.forEach(function (c) { ['add', 'edit', 'delete'].forEach(function (k) { var e = modEntry(c, k); if (e && e.at > overall) overall = e.at; }); });
     a.log.forEach(function (e) { if (e.at > overall) overall = e.at; });
@@ -1048,7 +1176,53 @@
           personField('employeeId', 'Employee', 'employee', empOptions(rec && rec.employeeId), rec),
           { name: 'date', label: 'Date', type: 'date', required: true },
           { name: 'amount', label: 'Amount', type: 'number', required: true, positive: true, max: 100000000, step: '0.01' },
+          { name: 'clearedMode', label: 'Status', type: 'select', options: [['auto', 'Auto (by salary date)'], ['cleared', 'Cleared (manual)'], ['pending', 'Not Cleared (manual)']], hint: 'Auto = Cleared when dated on/before the previous month salary date' },
           { name: 'reason', label: 'Reason', type: 'text', maxlength: 150, wide: true },
+          { name: 'notes', label: 'Notes', type: 'textarea', wide: true }
+        ];
+      },
+      defaults: function () { return { date: todayStr(), clearedMode: 'auto' }; },
+      validate: function () { return null; },
+      customSave: function (v, people) {
+        if (!people) return null;
+        var now = new Date().toISOString();
+        people.forEach(function (p) { db.advances.push({ id: uid(), createdAt: now, employeeId: p, date: v.date, amount: v.amount, clearedMode: v.clearedMode || 'auto', reason: v.reason, notes: v.notes }); });
+        return { msg: 'Advance added for ' + people.length + ' employee(s).', count: people.length };
+      },
+      bulkNames: ['date', 'amount', 'clearedMode', 'reason', 'notes'],
+      describe: function (r) { return 'advance of ' + empName(r.employeeId) + ' on ' + r.date; }
+    },
+    deductions: {
+      title: 'Deduction', coll: 'deductions', needs: NEED_EMP,
+      fields: function (rec) {
+        return [
+          personField('employeeId', 'Employee', 'employee', empOptions(rec && rec.employeeId), rec),
+          { name: 'date', label: 'Date', type: 'date', required: true },
+          { name: 'type', label: 'Type', type: 'select', required: true, options: [['Previous Advance', 'Previous Advance'], ['Other Amount', 'Other Amount']] },
+          { name: 'amount', label: 'Amount', type: 'number', required: true, positive: true, max: 100000000, step: '0.01' },
+          { name: 'reason', label: 'Reason', type: 'text', maxlength: 150, wide: true },
+          { name: 'notes', label: 'Notes', type: 'textarea', wide: true }
+        ];
+      },
+      defaults: function () { return { date: todayStr(), type: 'Previous Advance' }; },
+      validate: function () { return null; },
+      customSave: function (v, people) {
+        if (!people) return null;
+        var now = new Date().toISOString();
+        people.forEach(function (p) { db.deductions.push({ id: uid(), createdAt: now, employeeId: p, date: v.date, type: v.type, amount: v.amount, reason: v.reason, notes: v.notes }); });
+        return { msg: 'Deduction added for ' + people.length + ' employee(s).', count: people.length };
+      },
+      bulkNames: ['date', 'type', 'amount', 'reason', 'notes'],
+      describe: function (r) { return 'deduction of ' + empName(r.employeeId) + ' on ' + r.date; }
+    },
+    outsiderSalary: {
+      title: 'Outside Worker Salary', coll: 'outsideWorkerSalary', needs: NEED_WORKER,
+      fields: function (rec) {
+        return [
+          personField('workerId', 'Worker', 'worker', workerOptions(rec && rec.workerId), rec),
+          { name: 'date', label: 'Paid up to (date)', type: 'date', required: true, hint: 'Salary calculated and settled up to this date' },
+          { name: 'given', label: 'Given Salary', type: 'number', required: true, min: 0, max: 100000000, step: '0.01' },
+          { name: 'balance', label: 'Balance (pending)', type: 'number', required: true, min: 0, max: 100000000, step: '0.01', hint: 'Amount still pending — enter 0 if nothing is pending' },
           { name: 'notes', label: 'Notes', type: 'textarea', wide: true }
         ];
       },
@@ -1057,11 +1231,11 @@
       customSave: function (v, people) {
         if (!people) return null;
         var now = new Date().toISOString();
-        people.forEach(function (p) { db.advances.push({ id: uid(), createdAt: now, employeeId: p, date: v.date, amount: v.amount, reason: v.reason, notes: v.notes }); });
-        return { msg: 'Advance added for ' + people.length + ' employee(s).' };
+        people.forEach(function (p) { db.outsideWorkerSalary.push({ id: uid(), createdAt: now, workerId: p, date: v.date, given: v.given, balance: v.balance, notes: v.notes }); });
+        return { msg: 'Salary record added for ' + people.length + ' worker(s).', count: people.length };
       },
-      bulkNames: ['date', 'amount', 'reason', 'notes'],
-      describe: function (r) { return 'advance of ' + empName(r.employeeId) + ' on ' + r.date; }
+      bulkNames: ['date', 'given', 'balance', 'notes'],
+      describe: function (r) { return 'salary of ' + workerName(r.workerId) + ' up to ' + r.date; }
     },
     outsiders: {
       title: 'Outside Worker', coll: 'outsideWorkers',
@@ -1443,8 +1617,8 @@
       (recs.length > 5 ? '<li>…and ' + (recs.length - 5) + ' more</li>' : '') + '</ul>';
   }
   function cascadeCount(kind, set) {
-    if (kind === 'employees') return db.leaves.concat(db.employeeOT, db.advances).filter(function (x) { return set[x.employeeId]; }).length;
-    if (kind === 'outsiders') return db.outsideWorkerOT.concat(db.outsideWorkerWork, db.outsideWorkerLeave).filter(function (x) { return set[x.workerId]; }).length;
+    if (kind === 'employees') return db.leaves.concat(db.employeeOT, db.advances, db.deductions).filter(function (x) { return set[x.employeeId]; }).length;
+    if (kind === 'outsiders') return db.outsideWorkerOT.concat(db.outsideWorkerWork, db.outsideWorkerLeave, db.outsideWorkerSalary).filter(function (x) { return set[x.workerId]; }).length;
     return 0;
   }
   function removeRecords(kind, ids) {
@@ -1455,8 +1629,8 @@
     cascadeRemove(kind, set);
   }
   function cascadeRemove(kind, set) {
-    var spec = kind === 'employees' ? [['leaves', 'employeeId'], ['employeeOT', 'employeeId'], ['advances', 'employeeId']]
-      : kind === 'outsiders' ? [['outsideWorkerOT', 'workerId'], ['outsideWorkerWork', 'workerId'], ['outsideWorkerLeave', 'workerId']] : [];
+    var spec = kind === 'employees' ? [['leaves', 'employeeId'], ['employeeOT', 'employeeId'], ['advances', 'employeeId'], ['deductions', 'employeeId']]
+      : kind === 'outsiders' ? [['outsideWorkerOT', 'workerId'], ['outsideWorkerWork', 'workerId'], ['outsideWorkerLeave', 'workerId'], ['outsideWorkerSalary', 'workerId']] : [];
     spec.forEach(function (p) {
       var before = db[p[0]].length;
       db[p[0]] = db[p[0]].filter(function (x) { return !set[x[p[1]]]; });
@@ -1701,12 +1875,12 @@
     if (!rec) return;
     var msg = 'Delete <strong>' + esc(cfg.describe(rec)) + '</strong>? This cannot be undone.', cascade = 0;
     if (kind === 'employees') {
-      cascade = db.leaves.filter(function (x) { return x.employeeId === id; }).length + db.employeeOT.filter(function (x) { return x.employeeId === id; }).length + db.advances.filter(function (x) { return x.employeeId === id; }).length;
-      msg = 'Delete employee <strong>' + esc(cfg.describe(rec)) + '</strong>?' + (cascade ? ' Their <strong>' + cascade + '</strong> leave, OT and advance record(s) will also be deleted.' : '') +
+      cascade = db.leaves.filter(function (x) { return x.employeeId === id; }).length + db.employeeOT.filter(function (x) { return x.employeeId === id; }).length + db.advances.filter(function (x) { return x.employeeId === id; }).length + db.deductions.filter(function (x) { return x.employeeId === id; }).length;
+      msg = 'Delete employee <strong>' + esc(cfg.describe(rec)) + '</strong>?' + (cascade ? ' Their <strong>' + cascade + '</strong> leave, OT, advance and deduction record(s) will also be deleted.' : '') +
         ' This cannot be undone.<br><br><span class="hint">Tip: set the status to Inactive instead to keep their history.</span>';
     } else if (kind === 'outsiders') {
-      cascade = db.outsideWorkerOT.filter(function (x) { return x.workerId === id; }).length + db.outsideWorkerWork.filter(function (x) { return x.workerId === id; }).length + db.outsideWorkerLeave.filter(function (x) { return x.workerId === id; }).length;
-      msg = 'Delete outside worker <strong>' + esc(cfg.describe(rec)) + '</strong>?' + (cascade ? ' Their <strong>' + cascade + '</strong> work, leave and OT record(s) will also be deleted.' : '') +
+      cascade = db.outsideWorkerOT.filter(function (x) { return x.workerId === id; }).length + db.outsideWorkerWork.filter(function (x) { return x.workerId === id; }).length + db.outsideWorkerLeave.filter(function (x) { return x.workerId === id; }).length + db.outsideWorkerSalary.filter(function (x) { return x.workerId === id; }).length;
+      msg = 'Delete outside worker <strong>' + esc(cfg.describe(rec)) + '</strong>?' + (cascade ? ' Their <strong>' + cascade + '</strong> work, leave, OT and salary record(s) will also be deleted.' : '') +
         ' This cannot be undone.<br><br><span class="hint">Tip: set the status to Inactive instead to keep their history.</span>';
     }
     var ok = await confirmBox({ title: 'Confirm delete', message: msg, okText: 'Delete', danger: true });
@@ -1773,7 +1947,7 @@
 
   function cleanList(key, list) {
     var out = [], skipped = 0;
-    var dated = ['leaves', 'employeeOT', 'advances', 'outsideWorkerWork', 'outsideWorkerLeave', 'outsideWorkerOT', 'holidays'];
+    var dated = ['leaves', 'employeeOT', 'advances', 'outsideWorkerWork', 'outsideWorkerLeave', 'outsideWorkerOT', 'outsideWorkerSalary', 'deductions', 'holidays'];
     list.forEach(function (r) {
       if (!r || typeof r !== 'object' || Array.isArray(r)) { skipped++; return; }
       var x = Object.assign({}, r);
@@ -1785,10 +1959,17 @@
         x.hours = r2(h);
       }
       if (key === 'holidays' && !String(x.name || '').trim()) { skipped++; return; }
-      if (key === 'advances') {
+      if (key === 'advances' || key === 'deductions') {
         var a = Number(x.amount);
         if (!isFinite(a) || a < 0) { skipped++; return; }
         x.amount = r2(a);
+      }
+      if (key === 'advances') x.clearedMode = x.clearedMode === 'cleared' || x.clearedMode === 'pending' ? x.clearedMode : 'auto';
+      if (key === 'deductions') x.type = x.type === 'Other Amount' ? 'Other Amount' : 'Previous Advance';
+      if (key === 'outsideWorkerSalary') {
+        var gv = Number(x.given), bl = Number(x.balance);
+        if (!isFinite(gv) || gv < 0 || !isFinite(bl) || bl < 0) { skipped++; return; }
+        x.given = r2(gv); x.balance = r2(bl);
       }
       if (key === 'leaves' || key === 'outsideWorkerWork' || key === 'outsideWorkerLeave') x.type = x.type === 'Half Day' ? 'Half Day' : 'Full Day';
       out.push(x);
@@ -1814,6 +1995,7 @@
         out[k].companyName = normCompany(s.companyName);
         out[k].companyLogo = normLogo(s.companyLogo);
         out[k].menuLabels = normMenu(s.menuLabels);
+        out[k].salaryDate = isDate(String(s.salaryDate || '')) ? String(s.salaryDate) : '';
       } else {
         if (!Array.isArray(data[k])) throw new Error('"' + k + '" in this file is not a list — the backup looks damaged.');
         var c = cleanList(k, data[k]); out[k] = c.out; skipped += c.skipped;
@@ -1948,6 +2130,9 @@
       case 'import-drive': importFromDrive(); break;
       case 'save-drive': saveDriveLink(false); break;
       case 'save-company': saveCompanyName(); break;
+      case 'adv-toggle': toggleAdvance(el.dataset.id); break;
+      case 'save-salary-date': saveSalaryDate(el, false); break;
+      case 'clear-salary-date': saveSalaryDate(el, true); break;
       case 'save-menu': saveMenuLabels(false); break;
       case 'reset-menu': saveMenuLabels(true); break;
       case 'pick-logo': $('#logo-file').click(); break;
@@ -1969,6 +2154,7 @@
   document.addEventListener('input', function (e) { if (e.target.classList && e.target.classList.contains('multi-search')) multiSearch(e.target); });
   document.addEventListener('change', function (e) {
     onFilterInput(e);
+    if (e.target.name === 'advStatus') { ui.f.advances.status = e.target.value; ui.sel = {}; renderAdvances(); return; }
     if (e.target.name === 'leaveWho') { ui.leaveWho = e.target.value === 'out' ? 'out' : 'emp'; ui.sel = {}; renderLeaves(); return; }
     if (e.target.name === 'mode' && e.target.form && e.target.form.id === 'rec-form') toggleRange(e.target.form, e.target.value === 'range');
     if (e.target.form && e.target.form.id === 'rec-form' && (e.target.name === 'date' || e.target.name === 'mode')) updateHolidayNote(e.target.form);
@@ -2103,11 +2289,11 @@
     db.appSettings.companyLogo = ''; if (!save('appSettings')) return;
     applyBranding(); renderCompanyCard(); toast('Logo removed — default logo restored.');
   }
-  var APP_VERSION = '20261026c';
+  var APP_VERSION = '20261121a';
   function staleCheck() {
     if (typeof document.getElementById !== 'function') return false;
     var meta = document.querySelector('meta[name="app-version"]');
-    var need = ['menulabels-grid', 'activity-body', 'leave-out-pane', 'outsiderLeave-table'];
+    var need = ['deductions-table', 'outsiderSalary-table', 'salary-box-adv', 'menulabels-grid', 'activity-body', 'leave-out-pane', 'outsiderLeave-table'];
     var missing = need.some(function (id) { return !document.getElementById(id); });
     if (!missing && meta && meta.getAttribute('content') === APP_VERSION) return false;
     var d = document.createElement('div'); d.className = 'banner stale-banner';

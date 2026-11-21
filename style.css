@@ -309,3 +309,13 @@ body.locked .app{display:none}
 
 .stale-banner{position:relative;z-index:3000}.stale-banner button{margin-left:8px;padding:4px 10px;border-radius:6px;border:1px solid #b45309;background:#fff;cursor:pointer}
 .auth-reset .fld{margin-bottom:8px}
+
+.b-cleared{background:#e5e7eb;color:#4b5563}
+.b-pending{background:#fff3cd;color:#8a5a00}
+.dim{opacity:.5}
+.salary-box .addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.salary-box input[type=date]{max-width:200px}
+
+.status-cell{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;max-width:100%}
+.status-cell .link-btn{white-space:normal;text-align:left}
+@media(max-width:700px){.status-cell{justify-content:flex-end}}

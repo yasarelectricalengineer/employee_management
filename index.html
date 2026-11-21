@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ameer Fire and Safety — Employee, Leave, OT &amp; Advance Management</title>
-<meta name="app-version" content="20261026c">
+<meta name="app-version" content="20261121a">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="theme-color" content="#D62828">
 <meta name="description" content="Employee, leave, overtime and advance management for Ameer Fire and Safety. Runs fully in your browser.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z' fill='%23D62828'/%3E%3Cpath d='M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z' fill='%23FFB703'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=20261026c">
+<link rel="stylesheet" href="style.css?v=20261121a">
 </head>
 <body>
 <noscript><div class="banner">This app needs JavaScript enabled to work.</div></noscript>
@@ -32,12 +32,14 @@
       <a href="#leaves" data-view="leaves"><span class="ico" data-ico="calendar"></span><span class="nl" data-lbl="leaves">Leave</span></a>
       <a href="#ot" data-view="ot"><span class="ico" data-ico="clock"></span><span class="nl" data-lbl="ot">Employee OT</span></a>
       <a href="#advances" data-view="advances"><span class="ico" data-ico="coin"></span><span class="nl" data-lbl="advances">Advance</span></a>
+      <a href="#deductions" data-view="deductions"><span class="ico" data-ico="minus"></span><span class="nl" data-lbl="deductions">Deductions</span></a>
       <a href="#holidays" data-view="holidays"><span class="ico" data-ico="calendar"></span><span class="nl" data-lbl="holidays">Holidays</span></a>
       <div class="nav-sep" data-lbl="sepOutside">Outside Workers</div>
       <a href="#outsiders" data-view="outsiders"><span class="ico" data-ico="hardhat"></span><span class="nl" data-lbl="outsiders">Outside Workers</span></a>
       <a href="#outsiderWork" data-view="outsiderWork"><span class="ico" data-ico="calendar"></span><span class="nl" data-lbl="outsiderWork">Outside Worker Work</span></a>
       <a href="#outsiderLeave" data-view="outsiderLeave"><span class="ico" data-ico="calendar"></span><span class="nl" data-lbl="outsiderLeave">Outside Worker Leave</span></a>
       <a href="#outsiderOT" data-view="outsiderOT"><span class="ico" data-ico="clock"></span><span class="nl" data-lbl="outsiderOT">Outside Worker OT</span></a>
+      <a href="#outsiderSalary" data-view="outsiderSalary"><span class="ico" data-ico="wallet"></span><span class="nl" data-lbl="outsiderSalary">Outside Worker Salary</span></a>
       <div class="nav-sep" data-lbl="sepOutput">Output</div>
       <a href="#reports" data-view="reports"><span class="ico" data-ico="report"></span><span class="nl" data-lbl="reports">Monthly Reports</span></a>
       <a href="#activity" data-view="activity"><span class="ico" data-ico="clock"></span><span class="nl" data-lbl="activity">Activity Log</span></a>
@@ -147,6 +149,12 @@
           <div><h2>Advances</h2><p>Monthly and employee-wise totals are calculated automatically.</p></div>
           <button class="btn btn-primary" data-action="add" data-kind="advances">+ Add Advance</button>
         </div>
+        <div class="who-switch card" role="radiogroup" aria-label="Advance status">
+          <label class="radio"><input type="radio" name="advStatus" value="pending" checked><span>Not Cleared Advance</span></label>
+          <label class="radio"><input type="radio" name="advStatus" value="cleared"><span>Cleared Advance</span></label>
+          <label class="radio"><input type="radio" name="advStatus" value="all"><span>All</span></label>
+        </div>
+        <div id="salary-box-adv" class="card card-body"></div>
         <div class="filters card">
           <label>Month<input type="month" data-f="advances.month"></label>
           <label>Employee<select data-f="advances.emp" data-src="employees" data-all="All employees"></select></label>
@@ -155,6 +163,23 @@
         </div>
         <div id="advances-summary"></div>
         <div id="advances-table"></div>
+      </section>
+
+      <!-- Deductions -->
+      <section class="view" id="view-deductions">
+        <div class="view-head">
+          <div><h2>Deductions</h2><p>Amounts or advances an employee took earlier that are to be deducted. Employees only.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="deductions">+ Add Deduction</button>
+        </div>
+        <div class="filters card">
+          <label>Month<input type="month" data-f="deductions.month"></label>
+          <label>Employee<select data-f="deductions.emp" data-src="employees" data-all="All employees"></select></label>
+          <label>Type<select data-f="deductions.type"><option value="">All</option><option>Previous Advance</option><option>Other Amount</option></select></label>
+          <label class="grow">Search<input type="search" data-f="deductions.q" placeholder="Name, reason, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="deductions">Clear Filters</button>
+        </div>
+        <div id="deductions-summary"></div>
+        <div id="deductions-table"></div>
       </section>
 
       <!-- Holidays -->
@@ -223,6 +248,23 @@
         </div>
         <div id="outsiderLeave-summary"></div>
         <div id="outsiderLeave-table"></div>
+      </section>
+
+      <!-- Outside Worker Salary -->
+      <section class="view" id="view-outsiderSalary">
+        <div class="view-head">
+          <div><h2>Outside Worker Salary</h2><p>Salary is not paid in full — record what was given up to a date and the balance still pending.</p></div>
+          <button class="btn btn-primary" data-action="add" data-kind="outsiderSalary">+ Add Salary Record</button>
+        </div>
+        <div class="filters card">
+          <label>Up-to month<input type="month" data-f="outsiderSalary.month"></label>
+          <label>Worker<select data-f="outsiderSalary.worker" data-src="workers" data-all="All workers"></select></label>
+          <label>Worker Source<select data-f="outsiderSalary.source" data-src="sources" data-all="All sources"></select></label>
+          <label class="grow">Search<input type="search" data-f="outsiderSalary.q" placeholder="Worker, notes…"></label>
+          <button class="btn btn-ghost" data-action="clear-filters" data-view="outsiderSalary">Clear Filters</button>
+        </div>
+        <div id="outsiderSalary-summary"></div>
+        <div id="outsiderSalary-table"></div>
       </section>
 
       <!-- Outside Worker OT -->
@@ -339,6 +381,11 @@
           </div>
         </div>
 
+        <div class="card" id="salary-card">
+          <div class="card-head"><h3>Advance clearing date</h3></div>
+          <div class="card-body"><div id="salary-box-set"></div></div>
+        </div>
+
         <div class="card" id="company-card">
           <div class="card-head"><h3>Company name &amp; logo</h3></div>
           <div class="card-body">
@@ -385,6 +432,6 @@
 <div id="toasts" aria-live="polite"></div>
 <input type="file" id="import-file" accept=".json,application/json" hidden>
 
-<script src="app.js?v=20261026c"></script>
+<script src="app.js?v=20261121a"></script>
 </body>
 </html>
