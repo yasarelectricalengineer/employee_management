@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ameer Fire and Safety — Employee, Leave, OT &amp; Advance Management</title>
-<meta name="app-version" content="20261124a">
+<meta name="app-version" content="20261125a">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="theme-color" content="#D62828">
 <meta name="description" content="Employee, leave, overtime and advance management for Ameer Fire and Safety. Runs fully in your browser.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z' fill='%23D62828'/%3E%3Cpath d='M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z' fill='%23FFB703'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=20261124a">
+<link rel="stylesheet" href="style.css?v=20261125a">
 </head>
 <body>
 <noscript><div class="banner">This app needs JavaScript enabled to work.</div></noscript>
@@ -84,6 +84,10 @@
         <div class="view-head">
           <div><h2>Employees</h2><p id="employees-count">Manage your staff records.</p></div>
           <button class="btn btn-primary" data-action="add" data-kind="employees">+ Add Employee</button>
+        </div>
+        <div class="who-switch card" role="radiogroup" aria-label="Employees list">
+          <label class="radio"><input type="radio" name="empTab" value="current" checked><span>Current Employees (<span id="emp-tab-cur-n">0</span>)</span></label>
+          <label class="radio"><input type="radio" name="empTab" value="ex"><span>Ex-Employees (<span id="emp-tab-ex-n">0</span>)</span></label>
         </div>
         <div class="filters card">
           <label class="grow">Search<input type="search" data-f="employees.q" placeholder="ID, name, phone, designation…"></label>
@@ -319,13 +323,7 @@
                   <label class="fld"><span class="lbl">Deduction to cut</span><input type="number" id="sal-ded" min="0" step="any" placeholder="0"><small class="hint" id="sal-dedinfo"></small></label>
                 </div>
                 <p class="hint" id="sal-fetchnote"></p>
-                <details class="sal-set"><summary>Settings (optional)</summary>
-                  <div class="form-grid">
-                    <label class="fld"><span class="lbl">Hours per day</span><input type="number" id="sal-hpd" min="1" step="any"></label>
-                    <label class="fld"><span class="lbl">Normal OT multiplier</span><input type="number" id="sal-mn" min="0" step="any"></label>
-                    <label class="fld"><span class="lbl">Special OT multiplier</span><input type="number" id="sal-ms" min="0" step="any"></label>
-                  </div>
-                </details>
+                <div id="sal-settings"></div>
               </div>
             </div>
             <div id="sal-result"></div>
@@ -346,6 +344,7 @@
           </div>
         </div>
         <div class="filters card no-print"><label>Month<input type="month" data-f="salReport.month"></label></div>
+        <div id="salReport-settings" class="card no-print" style="padding:4px 16px"></div>
         <div id="salReport-lock"></div>
         <div id="salReport-body"></div>
       </section>
@@ -503,6 +502,6 @@
 <div id="toasts" aria-live="polite"></div>
 <input type="file" id="import-file" accept=".json,application/json" hidden>
 
-<script src="app.js?v=20261124a"></script>
+<script src="app.js?v=20261125a"></script>
 </body>
 </html>

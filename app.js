@@ -26,7 +26,8 @@
   function normCalc(c) {
     c = c && typeof c === 'object' ? c : {};
     function n(v, d, mx) { v = Number(v); return isFinite(v) && v > 0 && v <= mx ? v : d; }
-    return { hpd: n(c.hpd, 8, 24), mulN: n(c.mulN, 1, 10), mulS: n(c.mulS, 1.5, 10) };
+    var dd = Math.round(Number(c.days));
+    return { days: dd >= 1 && dd <= 31 ? dd : 30, hpd: n(c.hpd, 8, 24), mulN: n(c.mulN, 1, 10), mulS: n(c.mulS, 1.5, 10) };
   }
   function normEdits(m) {
     var r = {}, n = 0;
@@ -49,7 +50,7 @@
   var DATA_KEYS = ['employees', 'leaves', 'employeeOT', 'advances', 'outsideWorkers', 'outsideWorkerWork', 'outsideWorkerLeave', 'outsideWorkerOT', 'outsideWorkerSalary', 'deductions', 'holidays'];
   var ALL_KEYS = DATA_KEYS.concat(['appSettings']);
   var OT_TYPES = { normal: 'Normal Hour OT', sunday: 'Sunday / Special OT', night: 'Night OT' };
-  var DEFAULT_SETTINGS = { currency: 'AED', lastBackup: null, driveUrl: DRIVE_URL, companyName: DEFAULT_COMPANY, companyLogo: '', salaryDate: '', salaryCalc: { hpd: 8, mulN: 1, mulS: 1.5 }, reportEdits: {} };
+  var DEFAULT_SETTINGS = { currency: 'AED', lastBackup: null, driveUrl: DRIVE_URL, companyName: DEFAULT_COMPANY, companyLogo: '', salaryDate: '', salaryCalc: { days: 30, hpd: 8, mulN: 1, mulS: 1.5 }, reportEdits: {} };
   function normCompany(n) { n = String(n == null ? '' : n).trim().replace(/\s+/g, ' ').slice(0, 60); return n || DEFAULT_COMPANY; }
   function normLogo(l) { return typeof l === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(l) && l.length < 600000 ? l : ''; }
   function normDrive(u) {
@@ -166,6 +167,7 @@
     var hay = Array.prototype.slice.call(arguments, 1).join(' ').toLowerCase();
     return hay.indexOf(s) !== -1;
   }
+  function isEx(e) { return !!e && (e.status === 'Ex-Employee' || (!!e.leavingDate && String(e.leavingDate) <= todayStr())); }
   function byName(a, b) { return String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }); }
   function byDateDesc(a, b) {
     return (b.date || '').localeCompare(a.date || '') || String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
@@ -312,7 +314,7 @@
   var ui = { view: 'dashboard', f: {}, sel: {}, leaveWho: 'emp' };
   var FILTER_DEFAULTS = {
     dashboard: function () { return { month: monthNow() }; },
-    employees: function () { return { q: '', status: '', dept: '' }; },
+    employees: function () { return { q: '', status: '', dept: '', tab: 'current' }; },
     leaves: function () { return { month: '', emp: '', type: '', q: '' }; },
     ot: function () { return { month: '', emp: '', type: '', q: '' }; },
     advances: function () { return { month: '', emp: '', q: '', status: 'pending' }; },
@@ -505,7 +507,7 @@
     var advNC = db.advances.filter(function (a) { return !isCleared(a); });
     var dedList = db.deductions.filter(function (d) { return inMonth(d, m); });
     var salBal = Object.keys(latestSalary(db.outsideWorkerSalary)).reduce(function (s, k) { return s + (Number(latestSalary(db.outsideWorkerSalary)[k].balance) || 0); }, 0);
-    var activeE = db.employees.filter(function (e) { return e.status === 'Active'; }).length;
+    var activeE = db.employees.filter(function (e) { return e.status === 'Active' && !isEx(e); }).length;
     var activeW = db.outsideWorkers.filter(function (w) { return w.status === 'Active'; }).length;
     var isEmpty = !DATA_KEYS.some(function (k) { return db[k].length; });
     var html = '';
@@ -541,22 +543,32 @@
     $('#dashboard-body').innerHTML = html;
   }
 
+  function empBadge(e) {
+    return isEx(e) ? '<span class="badge b-inactive">Ex-Employee</span>' : statusBadge(e.status);
+  }
   function renderEmployees() {
-    var f = ui.f.employees, all = db.employees;
-    var rows = all.filter(function (e) {
+    var f = ui.f.employees, all = db.employees, tab = f.tab === 'ex' ? 'ex' : 'current';
+    $$('input[name="empTab"]').forEach(function (r) { r.checked = r.value === tab; });
+    var nEx = all.filter(isEx).length;
+    var exLbl = $('#emp-tab-ex-n'); if (exLbl) exLbl.textContent = nEx;
+    var curLbl = $('#emp-tab-cur-n'); if (curLbl) curLbl.textContent = all.length - nEx;
+    var scoped = all.filter(function (e) { return (tab === 'ex') === isEx(e); });
+    var rows = scoped.filter(function (e) {
       return (!f.status || e.status === f.status) && (!f.dept || (e.department || '') === f.dept) &&
         matchQ(f.q, e.empId, e.name, e.phone, e.designation, e.department, e.notes);
     }).sort(byName);
-    $('#employees-count').textContent = all.length ? rows.length + ' of ' + all.length + ' employee(s) shown' : 'Manage your staff records.';
+    $('#employees-count').textContent = all.length ? rows.length + ' of ' + scoped.length + ' ' + (tab === 'ex' ? 'ex-employee(s)' : 'current employee(s)') + ' shown' : 'Manage your staff records.';
     var box = $('#employees-table');
     if (!all.length) { box.innerHTML = emptyState('No employees yet', 'Add your first employee to start tracking leave, overtime and advances.', '+ Add Employee', 'employees'); return; }
+    if (!scoped.length) { box.innerHTML = '<div class="empty small"><p>' + (tab === 'ex' ? 'No ex-employees yet. Set a Leaving Date or status "Ex-Employee" on an employee to move them here.' : 'No current employees.') + '</p></div>'; return; }
     if (!rows.length) { box.innerHTML = noMatch('employees'); return; }
-    box.innerHTML = cardOf('Employee List', '', tbl(
-      ['Employee ID', 'Name', 'Phone', 'Designation', 'Department', 'Joining Date', 'Status', 'Notes', 'Actions'],
+    var heads = ['Employee ID', 'Name', 'Phone', 'Designation', 'Department', 'Joining Date'].concat(tab === 'ex' ? ['Leaving Date'] : [], ['Status', 'Notes', 'Actions']);
+    box.innerHTML = cardOf(tab === 'ex' ? 'Ex-Employees' : 'Employee List', '', tbl(heads,
       rows.map(function (e) {
         return [esc(e.empId), '<strong>' + esc(e.name) + '</strong>', dash(e.phone), dash(e.designation), dash(e.department),
-          e.joiningDate ? fmtDate(e.joiningDate) : '<span class="muted">—</span>', statusBadge(e.status),
-          '<span class="wrap">' + dash(e.notes) + '</span>', actions('employees', e.id)];
+          e.joiningDate ? fmtDate(e.joiningDate) : '<span class="muted">—</span>'].concat(
+          tab === 'ex' ? [e.leavingDate ? fmtDate(e.leavingDate) : '<span class="muted">—</span>'] : [],
+          [empBadge(e), '<span class="wrap">' + dash(e.notes) + '</span>', actions('employees', e.id)]);
       })));
   }
 
@@ -917,7 +929,7 @@
       var ot = sumOT(db.employeeOT.filter(function (o) { return o.employeeId === e.id && inMonth(o, m); }));
       var adv = sumAdv(db.advances.filter(function (a) { return a.employeeId === e.id && inMonth(a, m); }));
       return { e: e, leave: leave, ot: ot, adv: adv, has: !!(leave || ot.total || adv) };
-    }).filter(function (r) { return r.e.status === 'Active' || r.has || f.emp; }).sort(function (a, b) { return byName(a.e, b.e); });
+    }).filter(function (r) { return (r.e.status === 'Active' && !isEx(r.e)) || r.has || f.emp; }).sort(function (a, b) { return byName(a.e, b.e); });
   }
   function buildWorkerReport(f) {
     var m = vm(f.month);
@@ -1108,19 +1120,46 @@
       return;
     }
     lock.innerHTML = ''; main.classList.remove('hidden'); $('#sal-lock-btn').classList.remove('hidden');
-    var sel = $('#sal-emp'), cur = sel.value;
-    sel.innerHTML = '<option value="">Select employee…</option>' + db.employees.slice().sort(byName).map(function (e) {
-      return '<option value="' + esc(e.id) + '">' + esc(e.name) + ' (' + esc(e.empId) + ')' + (e.status === 'Active' ? '' : ' — Inactive') + '</option>';
-    }).join('');
-    if (db.employees.some(function (e) { return e.id === cur; })) sel.value = cur;
-    var c = normCalc(db.appSettings.salaryCalc);
-    $('#sal-hpd').value = c.hpd; $('#sal-mn').value = c.mulN; $('#sal-ms').value = c.mulS;
     if (!$('#sal-month').value) { var t = todayStr(); $('#sal-month').value = t.slice(0, 7); }
+    fillSalEmp(); ensureCalcSet($('#sal-settings'));
     renderSalaryList();
     if (!ui.salInit) { ui.salInit = true; salFetch(); } else salCalc();
   }
+  function fillSalEmp() {
+    var sel = $('#sal-emp'), cur = sel.value, mon = vm($('#sal-month').value);
+    var list = db.employees.filter(function (e) { return !isEx(e) || (mon && e.leavingDate && String(e.leavingDate) >= mon + '-01'); }).sort(byName);
+    sel.innerHTML = '<option value="">Select employee…</option>' + list.map(function (e) {
+      return '<option value="' + esc(e.id) + '">' + esc(e.name) + ' (' + esc(e.empId) + ')' + (isEx(e) ? ' — Ex-Employee' : e.status === 'Active' ? '' : ' — Inactive') + '</option>';
+    }).join('');
+    if (list.some(function (e) { return e.id === cur; })) sel.value = cur;
+  }
+  function calcSetHtml() {
+    return '<details class="sal-set"><summary>Settings (optional)</summary><div class="form-grid">' +
+      '<label class="fld"><span class="lbl">Days in month</span><input type="number" data-calc="days" min="1" max="31" step="1"></label>' +
+      '<label class="fld"><span class="lbl">Hours per day</span><input type="number" data-calc="hpd" min="1" step="any"></label>' +
+      '<label class="fld"><span class="lbl">Normal OT multiplier</span><input type="number" data-calc="mulN" min="0" step="any"></label>' +
+      '<label class="fld"><span class="lbl">Special OT multiplier</span><input type="number" data-calc="mulS" min="0" step="any"></label></div>' +
+      '<p class="hint">These settings are shared by the Salary Calculator and the Salary Report. Default: 30 days, 8 hours, 1 and 1.5.</p>' +
+      '<button type="button" class="btn btn-sm" data-action="calc-reset">Reset to defaults</button></details>';
+  }
+  function syncCalcInputs() {
+    var c = normCalc(db.appSettings.salaryCalc);
+    $$('[data-calc]').forEach(function (el) { el.value = c[el.dataset.calc]; });
+  }
+  function ensureCalcSet(host) { if (host && !host.firstChild) host.innerHTML = calcSetHtml(); syncCalcInputs(); }
+  function calcSettingsChanged(el, reset) {
+    var box = el && el.closest ? el.closest('.sal-set') : null, old = normCalc(db.appSettings.salaryCalc), c;
+    if (reset) c = normCalc({});
+    else {
+      var raw = {}; $$('[data-calc]', box).forEach(function (x) { raw[x.dataset.calc] = x.value; });
+      c = normCalc(raw);
+    }
+    db.appSettings.salaryCalc = c; save('appSettings'); syncCalcInputs();
+    if (reset) toast('Settings reset to defaults.');
+    if (ui.view === 'salary') { if (c.days !== old.days) salFetch(); else salCalc(); } else if (ui.view === 'salReport') renderSalReport();
+  }
   function renderSalaryList() {
-    var rows = db.employees.slice().sort(byName);
+    var rows = db.employees.filter(function (e) { return !isEx(e); }).sort(byName);
     $('#sal-salaries').innerHTML = cardOf('Employee Base Salaries', 'Visible only after unlock', rows.length ? tbl(['Employee', 'Base Salary', 'Actions'],
       rows.map(function (e) {
         return [empCell(e.id), '<input type="number" min="0" step="0.01" class="sal-base-in" id="salb-' + esc(e.id) + '" value="' + (e.salary !== '' && e.salary != null ? esc(e.salary) : '') + '" placeholder="Not set">',
@@ -1145,15 +1184,13 @@
       ['sal-base', 'sal-leave', 'sal-otn', 'sal-ots', 'sal-adv', 'sal-ded'].forEach(function (k) { $('#' + k).value = ''; });
       note.textContent = 'Select an employee and a month to fetch records.'; $('#sal-advinfo').textContent = ''; $('#sal-dedinfo').textContent = ''; salCalc(); return;
     }
-    var L = db.leaves.filter(function (l) { return l.employeeId === id && String(l.date).slice(0, 7) === mon; });
-    var O = db.employeeOT.filter(function (o) { return o.employeeId === id && String(o.date).slice(0, 7) === mon; });
-    var ot = sumOT(O);
+    var A = attData(e, mon).tot, cfg = normCalc(db.appSettings.salaryCalc), after = cfg.days - leaveCap(e, mon, cfg.days);
     var pa = salPending('advances', id, mon), pd = salPending('deductions', id, mon);
     $('#sal-base').value = e.salary === '' || e.salary == null ? '' : e.salary;
-    $('#sal-leave').value = sumLeave(L); $('#sal-otn').value = ot.normal; $('#sal-ots').value = r2(ot.sunday + ot.other);
+    $('#sal-leave').value = r2(A.leave + after); $('#sal-otn').value = A.normal; $('#sal-ots').value = A.special;
     $('#sal-adv').value = sumAdv(pa); $('#sal-ded').value = sumAdv(pd);
-    note.textContent = 'Fetched for ' + monthLabel(mon) + ': ' + L.length + ' leave entr' + (L.length === 1 ? 'y' : 'ies') + ', ' + O.length + ' OT entr' + (O.length === 1 ? 'y' : 'ies') +
-      ', ' + pa.length + ' pending advance(s), ' + pd.length + ' pending deduction(s). ' + (e.salary === '' || e.salary == null ? 'Base salary not set — enter it below or save it in the list.' : '') + ' Special OT = ' + db.appSettings.labels.sunday + ' + other OT types.';
+    note.textContent = 'Fetched for ' + monthLabel(mon) + ' from the Attendance Sheet (' + fm(A.leave) + ' leave day(s), ' + fm(A.normal) + ' normal OT hr, ' + fm(A.special) + ' special OT hr), ' + pa.length + ' pending advance(s), ' + pd.length + ' pending deduction(s). ' +
+      (after ? 'Leaving date ' + fmtDate(e.leavingDate) + ': ' + after + ' day(s) after it are counted as not worked. ' : '') + (e.salary === '' || e.salary == null ? 'Base salary not set — enter it below or save it in the list. ' : '') + 'Special OT = ' + db.appSettings.labels.sunday + ' + other OT types.';
     salCalc();
   }
   function salPendInfo() {
@@ -1168,8 +1205,8 @@
     if (!ui.salUnlocked) { box.innerHTML = ''; return; }
     var pend = salPendInfo();
     if (!id || !vm(mon)) { box.innerHTML = '<div class="card"><div class="card-body"><p class="hint">Pick an employee and month to see the salary breakdown.</p></div></div>'; return; }
-    var DAYS = 30, base = sn('sal-base'), otN = sn('sal-otn'), otS = sn('sal-ots'), leave = sn('sal-leave'), adv = sn('sal-adv'), ded = sn('sal-ded');
-    var hpd = sn('sal-hpd') || 8, mN = sn('sal-mn'), mS = sn('sal-ms');
+    var cfg = normCalc(db.appSettings.salaryCalc), DAYS = cfg.days, base = sn('sal-base'), otN = sn('sal-otn'), otS = sn('sal-ots'), leave = sn('sal-leave'), adv = sn('sal-adv'), ded = sn('sal-ded');
+    var hpd = cfg.hpd, mN = cfg.mulN, mS = cfg.mulS;
     var perDay = base / DAYS, perHour = perDay / hpd, rN = perHour * mN, rS = perHour * mS;
     var aN = otN * rN, aS = otS * rS, lDed = leave * perDay, worked = Math.max(0, DAYS - leave);
     var cleared = Math.max(0, roundRule(base - lDed)), totOT = roundRule(aN + aS), net = cleared + totOT - adv - ded;
@@ -1196,7 +1233,7 @@
       tbl(['Item', 'Qty', 'Rate', 'Amount'], rows) +
       '<div class="sal-net"><span>Net Salary</span><b class="' + (net < 0 ? 'minus' : '') + '">' + esc(db.appSettings.currency || '') + ' ' + fm(net) + '</b></div>' +
       warns.map(function (w) { return '<p class="sal-warn">⚠ ' + esc(w) + '</p>'; }).join('') +
-      '<p class="hint">Month = 30 days · day rate = base / 30 · hour rate = day rate / ' + fm(hpd) + '. Round-off only on Base Cleared Salary and Total OT (.90 and above goes up).</p>' +
+      '<p class="hint">Month = ' + DAYS + ' days · day rate = base / ' + DAYS + ' · hour rate = day rate / ' + fm(hpd) + '. Round-off only on Base Cleared Salary and Total OT (.90 and above goes up).</p>' +
       '<div style="margin-top:12px"><button type="button" class="btn btn-primary" data-action="sal-apply"' + (ui.salApplied ? ' disabled' : '') + '>' + (ui.salApplied ? 'Records updated' : 'Apply to records (mark cleared)') + '</button></div></div>');
   }
   function cutRecords(coll, list, cut, empId, mon) {
@@ -1267,7 +1304,7 @@
       if (o.type === 'normal') ON[d] = (ON[d] || 0) + h; else OS[d] = (OS[d] || 0) + h;
     });
     for (var d = 1; d <= n; d++) {
-      var date = mon + '-' + pad(d), hol = !!holidayInfo(date), blocked = !!(e.joiningDate && date < e.joiningDate);
+      var date = mon + '-' + pad(d), hol = !!holidayInfo(date), blocked = !!((e.joiningDate && date < e.joiningDate) || (e.leavingDate && date > e.leavingDate));
       var c = { d: d, hol: hol, blocked: blocked, text: '', auto: '', lv: 0, nh: 0, sh: 0, manual: false };
       if (!blocked) {
         var lv = LV[d] || 0, nh = r2(ON[d] || 0), sh = r2(OS[d] || 0), parts = [];
@@ -1285,11 +1322,15 @@
     tot.leave = r2(tot.leave); tot.normal = r2(tot.normal); tot.special = r2(tot.special);
     return { cells: cells, tot: tot };
   }
-  function repEmployees(mon) {
-    return db.employees.filter(function (e) {
-      if (e.status === 'Active') return true;
-      return db.leaves.concat(db.employeeOT).some(function (x) { return x.employeeId === e.id && String(x.date).slice(0, 7) === mon; });
-    }).sort(byName);
+  function hasRecs(e, mon) { return db.leaves.concat(db.employeeOT).some(function (x) { return x.employeeId === e.id && String(x.date).slice(0, 7) === mon; }); }
+  function inScope(e, mon, forSalary) {
+    if (isEx(e)) { if (e.leavingDate) return String(e.leavingDate) >= mon + '-01'; return !forSalary && hasRecs(e, mon); }
+    return e.status === 'Active' || hasRecs(e, mon);
+  }
+  function repEmployees(mon, forSalary) { return db.employees.filter(function (e) { return inScope(e, mon, forSalary); }).sort(byName); }
+  function leaveCap(e, mon, days) {
+    if (e.leavingDate && String(e.leavingDate).slice(0, 7) === mon) return Math.min(days, Number(String(e.leavingDate).slice(8)));
+    return days;
   }
   function repHead(title, mon) {
     var p = mon.split('-');
@@ -1332,9 +1373,9 @@
   }
   function salRowData(e, mon) {
     var a = attData(e, mon).tot, ov = editsOf()['sal|' + mon + '|' + e.id] || {}, c = normCalc(db.appSettings.salaryCalc), base = Number(e.salary) || 0;
-    var perDay = base / 30, perHour = perDay / c.hpd, has = function (k) { return Object.prototype.hasOwnProperty.call(ov, k); };
-    var autoWd = Math.max(0, r2(30 - a.leave)), wd = has('wd') ? ov.wd : autoWd, leave = has('wd') ? 30 - ov.wd : a.leave;
-    var autoCl = Math.max(0, roundRule(base - leave * perDay)), cl = has('cl') ? ov.cl : autoCl;
+    var D = c.days, perDay = base / D, perHour = perDay / c.hpd, has = function (k) { return Object.prototype.hasOwnProperty.call(ov, k); };
+    var autoWd = Math.max(0, r2(leaveCap(e, mon, D) - a.leave)), wd = has('wd') ? ov.wd : autoWd, leave = D - wd;
+    var autoCl = Math.max(0, roundRule(base - (D - autoWd) * perDay)), cl = has('cl') ? ov.cl : autoCl;
     var hr = has('hr') ? ov.hr : a.normal, sp = has('sp') ? ov.sp : a.special;
     var autoTo = roundRule(hr * perHour * c.mulN + sp * perHour * c.mulS), to = has('to') ? ov.to : autoTo;
     var autoTs = r2(cl + to), ts = has('ts') ? ov.ts : autoTs;
@@ -1348,9 +1389,9 @@
   function renderSalReport() {
     var lock = $('#salReport-lock'), box = $('#salReport-body'), tools = $('#salReport-tools');
     syncFilterInputs('salReport');
-    if (!ui.salUnlocked) { tools.classList.add('hidden'); box.innerHTML = ''; lock.innerHTML = lockHtml(); return; }
-    lock.innerHTML = ''; tools.classList.remove('hidden');
-    var mon = repMon('salReport'), emps = repEmployees(mon);
+    if (!ui.salUnlocked) { tools.classList.add('hidden'); box.innerHTML = ''; $('#salReport-settings').innerHTML = ''; lock.innerHTML = lockHtml(); return; }
+    lock.innerHTML = ''; tools.classList.remove('hidden'); ensureCalcSet($('#salReport-settings'));
+    var mon = repMon('salReport'), emps = repEmployees(mon, true);
     if (!emps.length) { box.innerHTML = '<div class="card"><div class="card-body"><p class="hint">Add employees to generate the report.</p></div></div>'; return; }
     var tot = { cl: 0, hr: 0, sp: 0, to: 0, ts: 0, ad: 0, ov: 0 }, manual = 0, missing = 0;
     var rows = emps.map(function (e) {
@@ -1363,7 +1404,7 @@
         '<td class="no-print">' + (r.any ? '<button type="button" class="link-btn" data-action="sal-row-reset" data-id="' + esc(e.id) + '">Reset</button>' : '') + '</td></tr>';
     }).join('');
     box.innerHTML = repHead('Monthly Salary Report', mon) +
-      '<p class="hint no-print">Values come from the Attendance Sheet (leave / OT), base salaries and the salary-calculator rules (30-day month, round-off on Cleared Salary and Total OT). <strong>Advance</strong> = advances + deductions dated in this month. Any box can be edited manually' +
+      '<p class="hint no-print">Values come from the Attendance Sheet (leave / OT), base salaries and the salary-calculator rules (' + normCalc(db.appSettings.salaryCalc).days + '-day month, round-off on Cleared Salary and Total OT; employees who left are calculated up to their leaving date only). <strong>Advance</strong> = advances + deductions dated in this month. Any box can be edited manually' +
       (manual ? ' — <strong>' + manual + '</strong> manual value(s)' : '') + (missing ? '; <strong>' + missing + '</strong> employee(s) have no base salary yet' : '') + '. Amounts in ' + esc(db.appSettings.currency || '') + '.</p>' +
       '<div class="att-wrap"><table class="rep-table"><thead><tr><th rowspan="2" class="nm">Name</th><th rowspan="2">Month</th><th rowspan="2">Worked Days</th><th rowspan="2">Monthly Cleared Salary</th><th colspan="2">OT</th><th rowspan="2">Total OT</th><th rowspan="2">Total Salary</th><th rowspan="2">Advance</th><th rowspan="2">Overall Cleared Salary</th><th rowspan="2" class="no-print"></th></tr>' +
       '<tr><th>Hr</th><th>Spl</th></tr></thead><tbody>' + rows + '</tbody><tfoot><tr><td colspan="3"><strong>Total</strong></td><td class="num"><strong>' + fm(tot.cl) + '</strong></td><td class="num"><strong>' + fm(tot.hr) + '</strong></td><td class="num"><strong>' + fm(tot.sp) + '</strong></td><td class="num"><strong>' + fm(tot.to) + '</strong></td><td class="num"><strong>' + fm(tot.ts) + '</strong></td><td class="num"><strong>' + fm(tot.ad) + '</strong></td><td class="num"><strong>' + fm(tot.ov) + '</strong></td><td class="no-print"></td></tr></tfoot></table></div>';
@@ -1409,7 +1450,7 @@
   function salCsv() {
     if (!ui.salUnlocked) return;
     var mon = repMon('salReport'), lines = [csvLine(['Name', 'Month', 'Worked Days', 'Monthly Cleared Salary', 'OT Hr', 'OT Spl', 'Total OT', 'Total Salary', 'Advance', 'Overall Cleared Salary'])];
-    repEmployees(mon).forEach(function (e) {
+    repEmployees(mon, true).forEach(function (e) {
       var r = salRowData(e, mon).vals; lines.push(csvLine([e.name, monthLabel(mon)].concat(SAL_COLS.map(function (k) { return r[k]; }))));
     });
     download('salary-report-' + mon + '.csv', '﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8');
@@ -1449,7 +1490,7 @@
 
   /* ================= Forms ================= */
   function empOptions(cur) {
-    return db.employees.filter(function (e) { return e.status === 'Active' || e.id === cur; }).sort(byName)
+    return db.employees.filter(function (e) { return (e.status === 'Active' && !isEx(e)) || e.id === cur; }).sort(byName)
       .map(function (e) { return [e.id, e.name + ' (' + e.empId + ')']; });
   }
   function workerOptions(cur) {
@@ -1457,6 +1498,7 @@
       .map(function (w) { return [w.id, w.name + ' (' + w.workerId + ')']; });
   }
   var STATUS_OPTS = [['Active', 'Active'], ['Inactive', 'Inactive']];
+  var EMP_STATUS_OPTS = [['Active', 'Active'], ['Inactive', 'Inactive'], ['Ex-Employee', 'Ex-Employee (left company)']];
   var OT_OPTS = Object.keys(OT_TYPES).map(function (k) { return [k, OT_TYPES[k]]; });
   var NEED_EMP = function () { return empOptions().length ? null : { msg: 'Add an active employee first.', view: 'employees' }; };
   var NEED_WORKER = function () { return workerOptions().length ? null : { msg: 'Add an active outside worker first.', view: 'outsiders' }; };
@@ -1472,7 +1514,8 @@
           { name: 'designation', label: 'Designation', type: 'text', required: true, maxlength: 80, list: designations() },
           { name: 'department', label: 'Department', type: 'text', maxlength: 80, list: departments() },
           { name: 'joiningDate', label: 'Joining Date', type: 'date' },
-          { name: 'status', label: 'Status', type: 'select', required: true, options: STATUS_OPTS },
+          { name: 'leavingDate', label: 'Leaving Date', type: 'date', hint: 'Optional — moves to Ex-Employees on this date' },
+          { name: 'status', label: 'Status', type: 'select', required: true, options: EMP_STATUS_OPTS },
           { name: 'notes', label: 'Notes', type: 'textarea', wide: true }
         ];
       },
@@ -1481,9 +1524,16 @@
         var dup = db.employees.find(function (e) { return e.empId.toLowerCase() === v.empId.toLowerCase() && (!rec || e.id !== rec.id); });
         if (dup) return { msg: 'Employee ID "' + v.empId + '" is already used by ' + dup.name + '.', field: 'empId' };
         if (v.phone && !/^[0-9+()\-\s]{6,25}$/.test(v.phone)) return { msg: 'Enter a valid phone number.', field: 'phone' };
+        if (v.leavingDate && v.joiningDate && v.leavingDate < v.joiningDate) return { msg: 'Leaving date cannot be before the joining date.', field: 'leavingDate' };
         return null;
       },
-      bulkNames: ['designation', 'department', 'status', 'notes'],
+      normalize: function (v) {
+        var o = Object.assign({}, v);
+        if (o.status === 'Ex-Employee' && !o.leavingDate) o.leavingDate = todayStr();
+        if (!o.leavingDate) o.leavingDate = '';
+        return o;
+      },
+      bulkNames: ['designation', 'department', 'status', 'leavingDate', 'notes'],
       describe: function (r) { return r.name + ' (' + r.empId + ')'; }
     },
     leaves: {
@@ -2354,6 +2404,7 @@
         if (!isFinite(a) || a < 0) { skipped++; return; }
         x.amount = r2(a);
       }
+      if (key === 'employees') x.leavingDate = isDate(String(x.leavingDate || '')) ? String(x.leavingDate) : '';
       if (key === 'employees' && x.salary != null && x.salary !== '') { var sv = Number(x.salary); x.salary = isFinite(sv) && sv >= 0 ? r2(sv) : ''; }
       if (key === 'deductions') x.clearedMode = x.clearedMode === 'cleared' ? 'cleared' : 'pending';
       if (key === 'advances') x.clearedMode = x.clearedMode === 'cleared' || x.clearedMode === 'pending' ? x.clearedMode : 'auto';
@@ -2540,6 +2591,7 @@
       case 'sal-row-reset': repResetRow(el.dataset.id); break;
       case 'sal-lock': ui.salUnlocked = false; ui.salInit = false; renderCurrent(); break;
       case 'sal-reload': salFetch(); break;
+      case 'calc-reset': calcSettingsChanged(el, true); break;
       case 'sal-apply': salApply(); break;
       case 'sal-save-base': salSaveBase(el.dataset.id); break;
       case 'save-salary-date': saveSalaryDate(el, false); break;
@@ -2588,14 +2640,14 @@
   });
   document.addEventListener('change', function (e) {
     var id = e.target.id;
+    if (id === 'sal-month') fillSalEmp();
     if (id === 'sal-emp' || id === 'sal-month') salFetch();
-    if (id === 'sal-hpd' || id === 'sal-mn' || id === 'sal-ms') {
-      var c = normCalc({ hpd: $('#sal-hpd').value, mulN: $('#sal-mn').value, mulS: $('#sal-ms').value });
-      db.appSettings.salaryCalc = c; save('appSettings');
-      $('#sal-hpd').value = c.hpd; $('#sal-mn').value = c.mulN; $('#sal-ms').value = c.mulS; salCalc();
-    }
+    if (e.target.dataset && e.target.dataset.calc) calcSettingsChanged(e.target, false);
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.id === 'sal-pass') { e.preventDefault(); salUnlock(); } });
+  document.addEventListener('change', function (e) {
+    if (e.target.name === 'empTab') { ui.f.employees.tab = e.target.value === 'ex' ? 'ex' : 'current'; ui.sel = {}; renderEmployees(); }
+  });
   document.addEventListener('focusout', function (e) {
     var td = e.target.closest && e.target.closest('td[data-att]'); if (td) attCellEdit(td);
   });
@@ -2722,7 +2774,7 @@
     db.appSettings.companyLogo = ''; if (!save('appSettings')) return;
     applyBranding(); renderCompanyCard(); toast('Logo removed — default logo restored.');
   }
-  var APP_VERSION = '20261124a';
+  var APP_VERSION = '20261125a';
   function staleCheck() {
     if (typeof document.getElementById !== 'function') return false;
     var meta = document.querySelector('meta[name="app-version"]');
