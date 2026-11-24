@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ameer Fire and Safety — Employee, Leave, OT &amp; Advance Management</title>
-<meta name="app-version" content="20261121a">
+<meta name="app-version" content="20261124a">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="theme-color" content="#D62828">
 <meta name="description" content="Employee, leave, overtime and advance management for Ameer Fire and Safety. Runs fully in your browser.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z' fill='%23D62828'/%3E%3Cpath d='M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z' fill='%23FFB703'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=20261121a">
+<link rel="stylesheet" href="style.css?v=20261124a">
 </head>
 <body>
 <noscript><div class="banner">This app needs JavaScript enabled to work.</div></noscript>
@@ -41,6 +41,9 @@
       <a href="#outsiderOT" data-view="outsiderOT"><span class="ico" data-ico="clock"></span><span class="nl" data-lbl="outsiderOT">Outside Worker OT</span></a>
       <a href="#outsiderSalary" data-view="outsiderSalary"><span class="ico" data-ico="wallet"></span><span class="nl" data-lbl="outsiderSalary">Outside Worker Salary</span></a>
       <div class="nav-sep" data-lbl="sepOutput">Output</div>
+      <a href="#salary" data-view="salary"><span class="ico" data-ico="calc"></span><span class="nl" data-lbl="salary">Salary Calculator</span></a>
+      <a href="#salReport" data-view="salReport"><span class="ico" data-ico="coin"></span><span class="nl" data-lbl="salReport">Salary Report</span></a>
+      <a href="#attSheet" data-view="attSheet"><span class="ico" data-ico="sheet"></span><span class="nl" data-lbl="attSheet">Attendance Sheet</span></a>
       <a href="#reports" data-view="reports"><span class="ico" data-ico="report"></span><span class="nl" data-lbl="reports">Monthly Reports</span></a>
       <a href="#activity" data-view="activity"><span class="ico" data-ico="clock"></span><span class="nl" data-lbl="activity">Activity Log</span></a>
       <a href="#backup" data-view="backup"><span class="ico" data-ico="database"></span><span class="nl" data-lbl="backup">Backup &amp; Drive</span></a>
@@ -293,6 +296,74 @@
         <div id="activity-body"></div>
       </section>
 
+      <!-- Salary Calculator -->
+      <section class="view" id="view-salary">
+        <div class="view-head">
+          <div><h2>Salary Calculator</h2><p>Leave, OT, advance and deductions are fetched from records. Every value can be edited. Password protected.</p></div>
+          <button class="btn hidden" id="sal-lock-btn" data-action="sal-lock">Lock</button>
+        </div>
+        <div id="salary-lock"></div>
+        <div id="salary-main" class="hidden">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-head"><h3>Inputs</h3><button type="button" class="btn btn-sm" data-action="sal-reload">Reload from records</button></div>
+              <div class="card-body" id="sal-form">
+                <div class="form-grid">
+                  <label class="fld wide"><span class="lbl">Employee</span><select id="sal-emp"></select></label>
+                  <label class="fld"><span class="lbl">Month</span><input type="month" id="sal-month"></label>
+                  <label class="fld"><span class="lbl">Base Salary</span><input type="number" id="sal-base" min="0" step="any" placeholder="e.g. 3000"></label>
+                  <label class="fld"><span class="lbl">Leave Days</span><input type="number" id="sal-leave" min="0" step="any" placeholder="0"></label>
+                  <label class="fld"><span class="lbl">Normal OT Hours</span><input type="number" id="sal-otn" min="0" step="any" placeholder="0"></label>
+                  <label class="fld"><span class="lbl">Special OT Hours</span><input type="number" id="sal-ots" min="0" step="any" placeholder="0"></label>
+                  <label class="fld"><span class="lbl">Advance to cut</span><input type="number" id="sal-adv" min="0" step="any" placeholder="0"><small class="hint" id="sal-advinfo"></small></label>
+                  <label class="fld"><span class="lbl">Deduction to cut</span><input type="number" id="sal-ded" min="0" step="any" placeholder="0"><small class="hint" id="sal-dedinfo"></small></label>
+                </div>
+                <p class="hint" id="sal-fetchnote"></p>
+                <details class="sal-set"><summary>Settings (optional)</summary>
+                  <div class="form-grid">
+                    <label class="fld"><span class="lbl">Hours per day</span><input type="number" id="sal-hpd" min="1" step="any"></label>
+                    <label class="fld"><span class="lbl">Normal OT multiplier</span><input type="number" id="sal-mn" min="0" step="any"></label>
+                    <label class="fld"><span class="lbl">Special OT multiplier</span><input type="number" id="sal-ms" min="0" step="any"></label>
+                  </div>
+                </details>
+              </div>
+            </div>
+            <div id="sal-result"></div>
+          </div>
+          <div id="sal-salaries" style="margin-top:16px"></div>
+        </div>
+      </section>
+
+      <!-- Salary Report -->
+      <section class="view" id="view-salReport">
+        <div class="view-head no-print">
+          <div><h2>Salary Report</h2><p>Monthly employee-wise salary sheet. Password protected; every value can be edited manually.</p></div>
+          <div class="head-actions hidden" id="salReport-tools">
+            <button class="btn btn-primary" data-action="rep-print" data-land="1">Print</button>
+            <button class="btn" data-action="sal-csv">CSV</button>
+            <button class="btn" data-action="sal-reset">Reset manual edits</button>
+            <button class="btn" data-action="sal-lock">Lock</button>
+          </div>
+        </div>
+        <div class="filters card no-print"><label>Month<input type="month" data-f="salReport.month"></label></div>
+        <div id="salReport-lock"></div>
+        <div id="salReport-body"></div>
+      </section>
+
+      <!-- Attendance Sheet -->
+      <section class="view" id="view-attSheet">
+        <div class="view-head no-print">
+          <div><h2>Attendance Sheet</h2><p>Monthly leave and OT sheet, employee-wise, built from Leave and OT records. Click any cell to edit.</p></div>
+          <div class="head-actions">
+            <button class="btn btn-primary" data-action="rep-print" data-land="1">Print</button>
+            <button class="btn" data-action="att-csv">CSV</button>
+            <button class="btn" data-action="att-reset">Reset manual edits</button>
+          </div>
+        </div>
+        <div class="filters card no-print"><label>Month<input type="month" data-f="attSheet.month"></label></div>
+        <div id="attSheet-body"></div>
+      </section>
+
       <!-- Reports -->
       <section class="view" id="view-reports">
         <div class="view-head no-print">
@@ -432,6 +503,6 @@
 <div id="toasts" aria-live="polite"></div>
 <input type="file" id="import-file" accept=".json,application/json" hidden>
 
-<script src="app.js?v=20261121a"></script>
+<script src="app.js?v=20261124a"></script>
 </body>
 </html>
