@@ -1371,9 +1371,15 @@
     return e.status === 'Active' || hasRecs(e, mon);
   }
   function repEmployees(mon, forSalary) { return db.employees.filter(function (e) { return inScope(e, mon, forSalary); }).sort(byName); }
+  function joinDay(e, mon) {
+    return e.joiningDate && String(e.joiningDate).slice(0, 7) === mon ? Math.max(1, Number(String(e.joiningDate).slice(8))) : 1;
+  }
   function leaveCap(e, mon, days) {
-    if (e.leavingDate && String(e.leavingDate).slice(0, 7) === mon) return Math.min(days, Number(String(e.leavingDate).slice(8)));
-    return days;
+    var js = joinDay(e, mon), lv = e.leavingDate && String(e.leavingDate).slice(0, 7) === mon ? Number(String(e.leavingDate).slice(8)) : 0;
+    if (e.joiningDate && String(e.joiningDate) > lastDayOf(mon)) return 0;
+    if (js <= 1 && !lv) return days;
+    var dim = Number(lastDayOf(mon).slice(8));
+    return Math.max(0, Math.min(days, (lv || dim) - js + 1));
   }
   function repHead(title, mon) {
     var p = mon.split('-');
@@ -1591,7 +1597,8 @@
   }
   function salVoucherFor(e, mon, from, to) {
     var c = normCalc(db.appSettings.salaryCalc), D = c.days, endMon = lastDayOf(mon), fd = Number(from.slice(8)), td = to >= endMon ? 31 : Number(to.slice(8));
-    var capTo = Math.min(to >= endMon ? D : Math.min(D, td), leaveCap(e, mon, D)), inRange = Math.max(0, capTo - (fd - 1)), lv = 0, nh = 0, sh = 0;
+    var js = joinDay(e, mon), lvD = e.leavingDate && String(e.leavingDate).slice(0, 7) === mon ? Number(String(e.leavingDate).slice(8)) : 99;
+    var capTo = Math.min(to >= endMon ? (js > 1 ? Number(endMon.slice(8)) : D) : Math.min(D, td), lvD), inRange = Math.max(0, Math.min(D, capTo - (Math.max(fd, js) - 1))), lv = 0, nh = 0, sh = 0;
     attData(e, mon).cells.forEach(function (x) { if (!x.blocked && x.d >= fd && x.d <= td) { lv += x.lv; nh += x.nh; sh += x.sh; } });
     var wd = Math.max(0, r2(inRange - lv)), base = Number(e.salary) || 0, alw = Number(e.allowance) || 0, pdB = c.lb ? base / D : 0, pdA = c.la ? alw / D : 0, perHour = ((c.ob ? base : 0) + (c.oa ? alw : 0)) / D / c.hpd;
     function within(x) { return x.employeeId === e.id && String(x.date) >= from && String(x.date) <= to; }
@@ -3319,7 +3326,7 @@
     db.appSettings.companyLogo = ''; if (!save('appSettings')) return;
     applyBranding(); renderCompanyCard(); toast('Logo removed — default logo restored.');
   }
-  var APP_VERSION = '20261127b';
+  var APP_VERSION = '20261127c';
   function staleCheck() {
     if (typeof document.getElementById !== 'function') return false;
     var meta = document.querySelector('meta[name="app-version"]');
