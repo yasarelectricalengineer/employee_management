@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ameer Fire and Safety — Employee, Leave, OT &amp; Advance Management</title>
-<meta name="app-version" content="20261125a">
+<meta name="app-version" content="20261127b">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="theme-color" content="#D62828">
 <meta name="description" content="Employee, leave, overtime and advance management for Ameer Fire and Safety. Runs fully in your browser.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2c1.2 5-3.8 7.5-6 12.2C8 18.6 9.6 25 16 29c6.4-4 8-10.4 6-14.8-1-2.2-2.6-3.6-3.6-6C17 10 16.5 6 16 2z' fill='%23D62828'/%3E%3Cpath d='M16 14c.6 2.6-2.4 4.2-2.4 7.2A2.6 2.6 0 0 0 16 24c2.3 0 3.4-2.2 2.6-4.2C18 18 16.6 16.8 16 14z' fill='%23FFB703'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=20261125a">
+<link rel="stylesheet" href="style.css?v=20261127b">
 </head>
 <body>
 <noscript><div class="banner">This app needs JavaScript enabled to work.</div></noscript>
@@ -44,6 +44,7 @@
       <a href="#salary" data-view="salary"><span class="ico" data-ico="calc"></span><span class="nl" data-lbl="salary">Salary Calculator</span></a>
       <a href="#salReport" data-view="salReport"><span class="ico" data-ico="coin"></span><span class="nl" data-lbl="salReport">Salary Report</span></a>
       <a href="#attSheet" data-view="attSheet"><span class="ico" data-ico="sheet"></span><span class="nl" data-lbl="attSheet">Attendance Sheet</span></a>
+      <a href="#vouchers" data-view="vouchers"><span class="ico" data-ico="report"></span><span class="nl" data-lbl="vouchers">Vouchers</span></a>
       <a href="#reports" data-view="reports"><span class="ico" data-ico="report"></span><span class="nl" data-lbl="reports">Monthly Reports</span></a>
       <a href="#activity" data-view="activity"><span class="ico" data-ico="clock"></span><span class="nl" data-lbl="activity">Activity Log</span></a>
       <a href="#backup" data-view="backup"><span class="ico" data-ico="database"></span><span class="nl" data-lbl="backup">Backup &amp; Drive</span></a>
@@ -319,6 +320,7 @@
                   <label class="fld"><span class="lbl">Leave Days</span><input type="number" id="sal-leave" min="0" step="any" placeholder="0"></label>
                   <label class="fld"><span class="lbl">Normal OT Hours</span><input type="number" id="sal-otn" min="0" step="any" placeholder="0"></label>
                   <label class="fld"><span class="lbl">Special OT Hours</span><input type="number" id="sal-ots" min="0" step="any" placeholder="0"></label>
+                  <label class="fld"><span class="lbl">Allowance</span><input type="number" id="sal-allow" min="0" step="any" placeholder="0"></label>
                   <label class="fld"><span class="lbl">Advance to cut</span><input type="number" id="sal-adv" min="0" step="any" placeholder="0"><small class="hint" id="sal-advinfo"></small></label>
                   <label class="fld"><span class="lbl">Deduction to cut</span><input type="number" id="sal-ded" min="0" step="any" placeholder="0"><small class="hint" id="sal-dedinfo"></small></label>
                 </div>
@@ -361,6 +363,45 @@
         </div>
         <div class="filters card no-print"><label>Month<input type="month" data-f="attSheet.month"></label></div>
         <div id="attSheet-body"></div>
+      </section>
+
+      <!-- Vouchers -->
+      <section class="view" id="view-vouchers">
+        <div class="view-head no-print">
+          <div><h2>Vouchers &amp; Pay Slips</h2><p>Advance payment vouchers, salary pay slips and room rent vouchers — two per A4 sheet. Edit anything, then print or download as PDF / Word.</p></div>
+          <div class="head-actions hidden" id="vch-tools">
+            <button class="btn btn-primary" data-action="vch-print">Print</button>
+            <button class="btn" data-action="vch-pdf">Download PDF</button>
+            <button class="btn" data-action="vch-docx">Download Word</button>
+          </div>
+        </div>
+        <div class="who-switch card no-print" role="radiogroup" aria-label="Voucher type">
+          <label class="radio"><input type="radio" name="vchType" value="adv" checked><span>Advance Payment Voucher</span></label>
+          <label class="radio"><input type="radio" name="vchType" value="sal"><span>Salary Pay Slip (password)</span></label>
+          <label class="radio"><input type="radio" name="vchType" value="rent"><span>Room Rent Voucher</span></label>
+        </div>
+        <div id="vouchers-lock"></div>
+        <div id="vch-ctrl" class="filters card no-print">
+          <label>Month<input type="month" id="vch-month"></label>
+          <label>From date<input type="date" id="vch-from"></label>
+          <label>Up to date<input type="date" id="vch-upto"></label>
+          <label id="vch-pv-wrap">Next PV No.<input type="number" id="vch-pv" min="1" step="1"></label>
+          <button class="btn btn-primary" data-action="vch-gen">Generate</button>
+          <button class="btn" id="vch-add-btn" data-action="vch-add">+ Add blank voucher</button>
+          <button class="btn btn-ghost" data-action="vch-logo-pick">Change logo</button>
+          <button class="btn btn-ghost" data-action="vch-logo-reset">Default logo</button>
+          <input type="file" id="vch-logo-file" accept="image/*" class="hidden">
+          <details class="v-lhset"><summary>Header text (optional)</summary>
+            <div class="form-grid">
+              <label class="fld wide"><span class="lbl">Arabic name</span><input data-lh="ar" dir="rtl" maxlength="90"></label>
+              <label class="fld wide"><span class="lbl">English name</span><input data-lh="en" maxlength="90"></label>
+              <label class="fld wide"><span class="lbl">Sub line</span><input data-lh="sub" maxlength="90"></label>
+            </div>
+            <button type="button" class="btn btn-sm" data-action="vch-lh-text-reset" style="margin-top:8px">Reset header text</button>
+          </details>
+        </div>
+        <p class="hint no-print" id="vouchers-note"></p>
+        <div id="vouchers-body"></div>
       </section>
 
       <!-- Reports -->
@@ -502,6 +543,6 @@
 <div id="toasts" aria-live="polite"></div>
 <input type="file" id="import-file" accept=".json,application/json" hidden>
 
-<script src="app.js?v=20261125a"></script>
+<script src="app.js?v=20261127b"></script>
 </body>
 </html>

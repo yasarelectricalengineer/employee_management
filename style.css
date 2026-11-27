@@ -349,3 +349,69 @@ body.locked .app{display:none}
 @media print{.rep-in{border:0;background:none!important;padding:0}.att-wrap{border:0;overflow:visible}.att-table,.rep-table{font-size:9px}.att-table td.man{box-shadow:none}.rep-in.man{background:none}}
 
 #salReport-settings:empty{display:none}
+
+.v-sheets{display:flex;flex-direction:column;gap:18px;align-items:flex-start;overflow-x:auto;max-width:100%;padding-bottom:8px}
+.v-page{width:210mm;height:297mm;background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.22);flex:none;overflow:hidden}
+.v-card{width:210mm;height:148.5mm;padding:6mm 15mm 0;position:relative;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;background:#fff}
+.v-card:first-child{border-bottom:1px dashed #b5b5b5}
+.v-card.slip{font-family:"Times New Roman",Times,serif}
+.v-lh{width:180mm;display:block}
+.v-card input,.v-card textarea{font:inherit;color:inherit;border:0;border-bottom:1px dotted #c8c8c8;background:transparent;padding:0 2px;outline:none;border-radius:0;box-shadow:none;min-width:0}
+.v-card input:hover,.v-card textarea:hover{background:#fffbe8}
+.v-card input:focus,.v-card textarea:focus{background:#fff4c2;border-bottom-color:var(--red)}
+.v-del{position:absolute;right:4mm;top:2mm;width:22px;height:22px;border-radius:50%;border:0;background:#fde2e2;color:#b91c1c;cursor:pointer;font-size:16px;line-height:1}
+.v-r1{display:flex;justify-content:space-between;padding:0 7mm;margin-top:7mm}
+.v-r1 input[data-vf=date]{width:30mm}.v-r1 input[data-vf=pv]{width:18mm}
+.v-mid{display:flex;justify-content:space-between;gap:6mm;margin-top:3mm;padding-left:10mm}
+.v-lines{flex:1;display:flex;flex-direction:column;gap:3.5mm;padding-top:6mm}
+.v-ln{display:flex;gap:6px;align-items:flex-start}.v-ln span{white-space:nowrap}
+.v-ln input{flex:1;font-weight:700}.v-ln textarea{flex:1;resize:none;line-height:1.35;height:2.8em}
+.v-box{width:50mm;height:16mm;border:1.5px solid #000;border-radius:3mm;display:flex;align-items:center;justify-content:center;gap:4px;flex:none;margin-top:3mm}
+.v-box input{width:24mm;font-weight:700;text-align:left}
+.v-sign{position:absolute;left:15mm;right:15mm;bottom:9mm;display:flex;justify-content:space-around;font-weight:700;font-size:10pt}
+.v-sign span{width:40mm;text-align:center}
+.slip .v-sign{font-weight:400;font-size:11pt}
+.v-ttl{text-align:center;font-weight:700;text-decoration:underline;font-size:13pt;margin:5mm 0 3mm}
+.v-kv{display:flex;align-items:baseline;gap:0;padding-left:10mm;margin-bottom:1.6mm}
+.v-kv>span:first-child{width:53mm}.v-kv>b{width:10mm;font-weight:400}.v-kv input{width:80mm}.v-w input{width:36mm}.v-w{white-space:nowrap}
+.v-tb{border-collapse:collapse;margin:2.5mm 0 0 10mm;width:160mm}
+.v-tb td{border:1px solid #000;padding:1px 2mm;width:45mm}.v-tb td:nth-child(even){width:35mm}.v-tb input{width:100%;text-align:right}
+.v-pay{margin:4mm 0 0 10mm;font-weight:700}.v-pay input{width:30mm;font-weight:700;text-align:right}
+@media(max-width:700px){.v-page{zoom:.45}}
+@media print{
+  .v-sheets{display:block;overflow:visible;padding:0}.v-page{box-shadow:none;margin:0;page-break-after:always;break-after:page;zoom:1!important}
+  .v-card input,.v-card textarea{border:0!important;background:none!important;resize:none}.v-card:first-child{border-bottom:1px dashed #bbb}.v-del{display:none}
+}
+
+.v-lhset{flex-basis:100%;font-size:13px}.v-lhset summary{cursor:pointer;font-weight:600}.v-lhset .form-grid{margin-top:10px;max-width:560px}
+.v-card.slip{font-size:10pt;padding-top:5mm}
+.slip .v-ttl{font-size:12pt;margin:3.5mm 0 2.5mm}
+.slip .v-kv{height:6mm;margin:0 0 1mm;align-items:center;padding-left:10mm}
+.slip .v-kv>span:first-child{width:53mm}.slip .v-kv>b{width:10mm}
+.slip .v-kv input{height:5mm;line-height:1;width:78mm;padding:0 2px;font-size:10pt}
+.slip .v-w input{width:34mm}
+.slip .v-tb{margin:2mm 0 0 10mm;width:160mm;table-layout:fixed}
+.slip .v-tb td{height:7mm;padding:0 2mm;vertical-align:middle;line-height:1;width:40mm}.slip .v-tb td:nth-child(even){width:40mm}
+.slip .v-tb input{height:5mm;line-height:1;width:100%;text-align:right;display:block;font-size:10pt}
+.slip .v-pay{margin:3mm 0 0 10mm;font-size:10.5pt}.slip .v-pay input{height:5mm;font-size:10.5pt}
+.slip .v-sign{bottom:6mm;font-size:10pt}
+.slip .v-w input[data-vf=days]{width:12mm}.slip .v-w input[data-vf=basic]{width:22mm}.slip .v-pay input{width:24mm}
+
+.slip .v-w input[data-vf=days],.slip .v-w input[data-vf=basic],.slip .v-pay input{width:auto;text-align:left;min-width:6mm}
+/* alignment polish: labels and fields share one line box */
+.v-card input,.v-card textarea{line-height:1.45;height:1.45em;vertical-align:baseline;padding:0 2px;margin:0}
+.v-card textarea{height:2.9em;display:block}
+.v-ln{align-items:flex-start;gap:6px}.v-ln>span{line-height:1.45;padding:0}
+.v-ln input{height:1.45em}
+.v-r1>span{display:flex;align-items:baseline;gap:4px}
+.v-box{align-items:center}.v-box b{line-height:1.45}.v-box input{height:1.45em}
+.v-lines{gap:3mm}
+.v-card input,.v-card textarea{padding:0 2px!important;min-height:0!important;height:1.45em!important;line-height:1.45!important;box-sizing:content-box!important;border-radius:0!important}
+.v-card textarea{height:2.9em!important}
+.slip .v-kv input,.slip .v-tb input,.slip .v-pay input{height:1.45em!important}
+.slip .v-w input[data-vf=days],.slip .v-w input[data-vf=basic],.slip .v-pay input{field-sizing:content}
+.v-box input{height:1.45em!important}
+
+.v-card textarea{height:auto!important;min-height:1.45em!important;overflow:hidden}
+.calc-inc .chk{display:inline-flex;align-items:center;gap:6px;margin-right:18px;font-weight:600;cursor:pointer}
+.calc-inc .chk input{width:auto;min-height:0;padding:0;margin:0}
